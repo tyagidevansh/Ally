@@ -18,11 +18,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    <ClerkProvider afterSignOutUrl="/">
+
     <html lang="en" suppressHydrationWarning>
       <body className={cn(inter.className,
         "bg-white, dark:bg-[#313338]"
       )}>
-      <ClerkProvider afterSignOutUrl="/">
+      
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -31,8 +33,9 @@ export default function RootLayout({
         >
         {children}
         </ThemeProvider>
-      </ClerkProvider>
+      
       </body>
     </html>
+    </ClerkProvider>
   );
 }
