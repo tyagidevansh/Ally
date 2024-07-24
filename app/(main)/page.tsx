@@ -1,8 +1,11 @@
 import { Chart } from "@/components/chart";
 import { ModeToggle } from "@/components/mode-toggle";
 import { UserButton } from "@clerk/nextjs";
+import { db } from "@/lib/db";
+import { initialProfile } from "@/lib/initial-profile";
 
-const Home = () => {
+const Home = async () => {
+  const profile = await initialProfile();
 
   return ( 
     <div className="font-bold dark:bg-zinc-800 h-full text-white">
@@ -13,7 +16,7 @@ const Home = () => {
         <ModeToggle/>
       </div> 
       <div>
-      <Chart/>
+        Hello {profile.name}!
       </div>
     </div>
    );
