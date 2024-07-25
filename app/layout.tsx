@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Merriweather } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "next-themes";
 import { cn } from "@/lib/utils";
 
-const inter = Inter({ subsets: ["latin"] });
+const font = Merriweather({ weight: "300", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Ally",
@@ -21,7 +21,7 @@ export default function RootLayout({
     <ClerkProvider afterSignOutUrl="/">
 
     <html lang="en" suppressHydrationWarning>
-      <body className={cn(inter.className,
+      <body className={cn(font.className,
         "bg-white, dark:bg-[#313338]"
       )}>
       
