@@ -1,16 +1,11 @@
-import { initialProfile } from "@/lib/initial-profile";
-import { redirect } from "next/navigation";
+'use client'
+
+import Stopwatch from "@/components/stopwatch";
 
 const Home = async () => {
-  const profile = await initialProfile();
-
-  if (!profile) {
-    redirect("/");
-  }
-
   return (
-    <div>
-      home page
+    <div className="h-full bg-zinc-900">
+      <Stopwatch/>
     </div>
   );
 }
