@@ -1,13 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 datasource db {
-  provider          = "postgresql"
-  url               = env("DATABASE_URL")
-  directUrl         = env("DIRECT_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -15,13 +9,26 @@ generator client {
 }
 
 model Profile {
-  id String @id @default(uuid())
-  userId String @unique
-  name String
+  id       String @id @default(uuid())
+  userId   String @unique
+  name     String
   imageUrl String @db.Text
-  email String @db.Text
+  email    String @db.Text
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  TimerLog  TimerLog[]
+}
+
+model TimerLog {
+  id        String  @id @default(uuid())
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id])
+  startTime DateTime
+  endTime DateTime
+  duration Int
+  activity String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-
