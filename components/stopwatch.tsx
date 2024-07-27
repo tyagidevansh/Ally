@@ -13,7 +13,17 @@ const Stopwatch = () => {
     const minutes = Math.floor((time % 3600000) / 60000);
     const seconds = Math.floor((time % 60000) / 1000);
 
-    return `${hours > 0 ? `${hours}:` : ''}${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+   if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  } else if (minutes > 0) {
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  } else {
+    return `${seconds}`;
+  }
+
+    // return `${hours > 0 ? `${hours}:` : ""}${minutes
+    //   .toString()
+    //   .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   };
 
   const updateTimer = useCallback(() => {
@@ -45,7 +55,7 @@ const Stopwatch = () => {
           startTime: new Date(startTimeRef.current).toISOString(),
           endTime: new Date(endTime).toISOString(),
           duration,
-          activity: "study"
+          activity: "study",
         });
         console.log("Timer log saved:", response.data);
       } catch (error) {
@@ -65,15 +75,19 @@ const Stopwatch = () => {
   }, []);
 
   return (
-    <div>
-      <div>{formatTime(elapsedTime)}</div>
-      <div>
-        <Button
-          onClick={isRunning ? stopTimer : startTimer}
-          className={isRunning ? "bg-red-500" : "bg-green-500"}
-        >
-          {isRunning ? 'Stop' : 'Start'}
-        </Button>
+    <div className="relative h-full flex flex-col items-center">
+      <div className="absolute top-3/4 -translate-y-full">
+        <div className="flex flex-col items-center justify-center w-60 h-60 border-4 border-green-500 rounded-full">
+          <div className="text-4xl">{formatTime(elapsedTime)}</div>
+        </div>
+        <div className="mt-4 flex justify-center">
+          <Button
+            onClick={isRunning ? stopTimer : startTimer}
+            className={isRunning ? "bg-red-500" : "bg-green-500"}
+          >
+            {isRunning ? "Stop" : "Start"}
+          </Button>
+        </div>
       </div>
     </div>
   );
