@@ -14,11 +14,9 @@ import {
 } from "@/components/ui/select";
 import Timer from "@/components/timer";
 import Pomodoro from "@/components/pomodoro";
-import { Button } from "@/components/ui/button";
 
 const Home = () => {
   const [selectedComponent, setSelectedComponent] = useState("Stopwatch");
-  const router = useRouter();
 
   const renderComponent = () => {
     switch(selectedComponent) {
@@ -33,9 +31,6 @@ const Home = () => {
     }
   };
 
-  const handleRedirect = () => {
-    router.push('/focus');
-  };
 
   return (
     <div className="h-screen bg-zinc-900 flex flex-col">
@@ -62,9 +57,6 @@ const Home = () => {
 
           {renderComponent()}
 
-          <Button onClick={handleRedirect}>
-            Focus!
-          </Button>
         </div>
 
         <div className="col-span-1 row-span-1 border border-white order-4">
