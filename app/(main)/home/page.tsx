@@ -36,6 +36,7 @@ const Home = () => {
 
         <div className="col-span-2 row-span-2 border border-white order-2">
           {renderComponent()}
+          
         </div>
 
         <div className="col-span-1 row-span-1 border border-white order-4">

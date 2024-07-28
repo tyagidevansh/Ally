@@ -39,3 +39,37 @@ export async function POST(req: Request) {
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 }
+
+export async function GET(req: Request) {
+  try {
+    const profile = await currentProfile();
+
+    if (!profile) {
+      return new NextResponse("Unauthorized", { status : 401});
+    }
+
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+    const logs = await db.timerLog.findMany({
+      where: {
+        profileId: profile.id,
+        startTime: {
+          gte: startOfDay,
+          lt: endOfDay,
+        },
+      },
+      select: {
+        duration: true,
+      },
+    });
+
+    const totalMicroseconds = logs.reduce((sum, log) => sum + log.duration, 0);
+
+    return NextResponse.json({ totalMicroseconds });
+  } catch (error) {
+    console.error("Error fetching daily logs ",error);
+    return new NextResponse("Internal server error" , {status: 500});
+  }
+}

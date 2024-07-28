@@ -32,6 +32,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showAlert, setShowAlert] = useState(false);
   const [activity, setActivity] = useState(initialActivity);
+  const [studyTimeToday, setStudyTimeToday] = useState(0);
   const startTimeRef = useRef<number | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const router = useRouter();
@@ -126,17 +127,34 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
     setShowAlert(false);
   };
 
+  const fetchTodayStudyTime = async () => {
+    try {
+      const response = await fetch('/api/timer-log', {
+        method: 'GET',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch study time');
+      }
+      const data = await response.json();
+      const totalMicroseconds = data.totalMicroseconds;
+      setStudyTimeToday(totalMicroseconds);
+      console.log("time spend studying today: ", totalMicroseconds);
+    } catch (error) {
+      console.error('Error fetching today\'s study time:', error);
+    }
+  };
+
   useEffect(() => {
     const activityParam = searchParams.get('activity');
     if (activityParam) {
       setActivity(activityParam);
     }
+    fetchTodayStudyTime();
   }, []);
 
   useEffect(() => {
     console.log(activity);
   }, [activity])
-
 
   return (
     <div className="relative h-full flex flex-col items-center">
@@ -208,6 +226,9 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                 </Select>
               </div>
             )}
+          </div>
+          <div className="text-zinc-400 mt-2">
+            Focused {formatTime(studyTimeToday)} seconds today
           </div>
         </div>
       </div>
