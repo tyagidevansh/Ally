@@ -36,7 +36,8 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
   const startTimeRef = useRef<number | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const router = useRouter();
-  const searchParams = useSearchParams();
+
+  
 
   const formatTime = (time: number) => {
     const hours = Math.floor(time / 3600000);
@@ -54,6 +55,23 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
     }
   };
 
+  const formatTimeForDaily = (time: number) => {
+    const hours = Math.floor(time / 36000000);
+    const minutes = Math.floor((time % 36000000) / 60000);
+    const seconds = Math.floor((time % 36000000)/ 1000);
+
+    let result = "";
+    if (hours > 0) {
+      result += `${hours} hr `; 
+    }
+    if (hours > 0 || minutes > 0) {
+      result += `${minutes} min `;
+    }
+    result += `${seconds} sec`;
+
+    return result.trim();
+  }
+
   const updateTimer = useCallback(() => {
     if (startTimeRef.current !== null) {
       const elapsedTime = Date.now() - startTimeRef.current;
@@ -63,10 +81,6 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
   }, []);
 
   const startTimer = useCallback(() => {
-    if (!autoStart) {
-      handleRedirect();
-    }
-
     const startTime = Date.now();
     startTimeRef.current = startTime;
     setIsRunning(true);
@@ -95,9 +109,9 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
       }
       setElapsedTime(0);
       startTimeRef.current = null;
-      router.push("/home");
+      router.refresh();
     }
-  }, [router]);
+  }, [router, activity]);
 
   useEffect(() => {
     return () => {
@@ -112,11 +126,6 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
       startTimer();
     }
   }, [autoStart, startTimer]);
-
-  const handleRedirect = () => {
-    router.push(`/focus?activity=${encodeURIComponent(activity)}`);
-    router.refresh();
-  };
 
   const handleStop = () => {
     setShowAlert(true);
@@ -138,19 +147,14 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
       const data = await response.json();
       const totalMicroseconds = data.totalMicroseconds;
       setStudyTimeToday(totalMicroseconds);
-      console.log("time spend studying today: ", totalMicroseconds);
     } catch (error) {
       console.error('Error fetching today\'s study time:', error);
     }
   };
 
   useEffect(() => {
-    const activityParam = searchParams.get('activity');
-    if (activityParam) {
-      setActivity(activityParam);
-    }
     fetchTodayStudyTime();
-  }, []);
+  }, [isRunning]);
 
   useEffect(() => {
     console.log(activity);
@@ -211,7 +215,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
             )}
               
           </div>
-          <div className="mt-4">
+          <div>
             {!autoStart && (
               <div className="mt-4">
                 <Select value = {activity} onValueChange={(value) => setActivity(value)}>
@@ -227,9 +231,11 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
               </div>
             )}
           </div>
-          <div className="text-zinc-400 mt-2">
-            Focused {formatTime(studyTimeToday)} seconds today
+          {!autoStart && (
+            <div className="text-zinc-400 mt-3">
+            Focused {formatTimeForDaily(studyTimeToday)} today
           </div>
+          )}
         </div>
       </div>
     </div>
