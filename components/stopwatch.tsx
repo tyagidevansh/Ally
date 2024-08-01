@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback, act } from "react";
 import { Button } from "./ui/button";
 import axios from "axios";
 import { useRouter, useSearchParams } from "next/navigation";
+import useTimerStore from "@/store/timerStore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,16 +29,30 @@ interface StopwatchProps {
 }
 
 const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"  }: StopwatchProps) => {
-  const [isRunning, setIsRunning] = useState(false);
+  const {isRunning, setIsRunning} = useTimerStore() as { isRunning: boolean, setIsRunning: (value: boolean) => void };
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showAlert, setShowAlert] = useState(false);
   const [activity, setActivity] = useState(initialActivity);
+  const [quote, setQuote] = useState("");
   const [studyTimeToday, setStudyTimeToday] = useState(0);
   const startTimeRef = useRef<number | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const router = useRouter();
 
-  
+  const quotes = [
+    "The future depends on what you do today",
+    "The only way to achieve the impossible is to believe it is possible",
+    "Push yourself, because no one else is going to do it for you",
+    "Success is not final, failure is not fatal",
+    "You don't have to be great to start, but you have to start to be great",
+    "Don't limit your challenges. Challenge your limits",
+    "Small daily improvements over time lead to stunning results"
+  ];
+
+  const getRandomQuote = () => {
+    const randomQuote = Math.floor(Math.random() * quotes.length);
+    setQuote(quotes[randomQuote]);
+  }
 
   const formatTime = (time: number) => {
     const hours = Math.floor(time / 3600000);
@@ -56,20 +71,19 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
   };
 
   const formatTimeForDaily = (time: number) => {
-    const hours = Math.floor(time / 36000000);
-    const minutes = Math.floor((time % 36000000) / 60000);
-    const seconds = Math.floor((time % 36000000)/ 1000);
+    const hours = Math.floor(time / 3600000);
+    const minutes = Math.floor((time % 3600000) / 60000);
+    const seconds = Math.floor((time % 60000) / 1000);
 
-    let result = "";
     if (hours > 0) {
-      result += `${hours} hr `; 
+      return `${hours} hr ${minutes.toString().padStart(2, "0")} min ${seconds
+        .toString()
+        .padStart(2, "0")} sec`;
+    } else if (minutes > 0) {
+      return `${minutes} min ${seconds.toString().padStart(2, "0")} sec`;
+    } else {
+      return `${seconds} sec`;
     }
-    if (hours > 0 || minutes > 0) {
-      result += `${minutes} min `;
-    }
-    result += `${seconds} sec`;
-
-    return result.trim();
   }
 
   const updateTimer = useCallback(() => {
@@ -121,12 +135,6 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
     };
   }, []);
 
-  useEffect(() => {
-    if (autoStart) {
-      startTimer();
-    }
-  }, [autoStart, startTimer]);
-
   const handleStop = () => {
     setShowAlert(true);
   };
@@ -154,6 +162,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
 
   useEffect(() => {
     fetchTodayStudyTime();
+    getRandomQuote();
   }, [isRunning]);
 
   useEffect(() => {
@@ -162,23 +171,24 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
 
   return (
     <div className="relative h-full flex flex-col items-center">
-      <div className="absolute top-3/4 -translate-y-full">
-        <div className="flex flex-col items-center justify-center w-60 h-60 border-4 border-green-500 rounded-full">
+      <div className="absolute top-[10%] flex flex-col items-center w-full">
+        <div className="flex flex-col items-center justify-center w-60 h-60 border-4 border-green-500 rounded-full mb-8">
           <div className="text-4xl">{formatTime(elapsedTime)}</div>
         </div>
-        <div className="mt-4 flex flex-col items-center bg-zinc-900">
-          <div className="mb-4">
+        
+        <div className="flex flex-col items-center w-full max-w-[350px]">
+          <div className="mb-4 w-[50%]">
             {isRunning ? (
               <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
                 <AlertDialogTrigger asChild>
                   <Button
                     onClick={handleStop}
-                    className="bg-red-500"
+                    className="bg-red-500 w-full"
                   >
                     Stop
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="bg-zinc-800 text-white">
+                <AlertDialogContent className="bg-zinc-200 dark:bg-zinc-800 text-black dark:text-white">
                   <AlertDialogHeader>
                     <AlertDialogTitle>Are you sure you want to stop the timer?</AlertDialogTitle>
                     <AlertDialogDescription>
@@ -194,32 +204,31 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
             ) : (
               <Button
                 onClick={startTimer}
-                className="bg-green-500"
+                className="bg-green-500 w-full"
               >
                 Start
               </Button>
             )}
           </div>
-          <div>
-            {!autoStart && (
-              <Select onValueChange={onChangeTimer}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Change type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Stopwatch">Stopwatch</SelectItem>
-                <SelectItem value="Timer">Timer</SelectItem>
-                <SelectItem value="Pomodoro">Pomodoro</SelectItem>
-              </SelectContent>
-            </Select>
-            )}
+          
+          {!autoStart && (
+            <>
+              <div className="mt-3 w-[50%]">
+                <Select onValueChange={onChangeTimer}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Change type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Stopwatch">Stopwatch</SelectItem>
+                    <SelectItem value="Timer">Timer</SelectItem>
+                    <SelectItem value="Pomodoro">Pomodoro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               
-          </div>
-          <div>
-            {!autoStart && (
-              <div className="mt-4">
-                <Select value = {activity} onValueChange={(value) => setActivity(value)}>
-                  <SelectTrigger className="w-[180px]">
+              <div className="mt-3 w-[50%]">
+                <Select value={activity} onValueChange={(value) => setActivity(value)}>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Choose activity" />
                   </SelectTrigger>
                   <SelectContent>
@@ -229,13 +238,16 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                   </SelectContent>
                 </Select>
               </div>
-            )}
-          </div>
-          {!autoStart && (
-            <div className="text-zinc-400 mt-3">
-            Focused {formatTimeForDaily(studyTimeToday)} today
-          </div>
+              
+              <div className="text-zinc-900 dark:text-zinc-300 mt-3 text-center">
+                Focused {formatTimeForDaily(studyTimeToday)} today
+              </div>
+            </>
           )}
+        </div>
+        
+        <div className="mt-16 text-zinc-900 dark:text-zinc-200 bottom-4 text-center">
+          {quote}
         </div>
       </div>
     </div>

@@ -24,7 +24,7 @@ const Home = () => {
   };
 
   return (
-    <div className="h-screen bg-zinc-900 flex flex-col">
+    <div className="h-screen bg-zinc-50 dark:bg-zinc-900 flex flex-col">
       <Navbar />
       <div className="flex-1 grid grid-cols-4 grid-rows-2">
         <div className="col-span-1 row-span-1 border border-white order-1">
