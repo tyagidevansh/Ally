@@ -15,7 +15,7 @@ const Home = () => {
       case "Stopwatch":
         return <Stopwatch onChangeTimer={setSelectedComponent}/>;
       case "Timer":
-        //return <Timer onChangeTimer={setSelectedComponent}/>;
+        return <Timer onChangeTimer={setSelectedComponent}/>;
       case "Pomodoro":
         return <Pomodoro onChangeTimer={setSelectedComponent}/>;
       default:
