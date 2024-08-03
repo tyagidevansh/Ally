@@ -1,14 +1,13 @@
 'use client'
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Navbar from "@/components/navbar";
 import Stopwatch from "@/components/stopwatch";
 import Timer from "@/components/timer";
 import Pomodoro from "@/components/pomodoro";
 
 const Home = () => {
-  const [selectedComponent, setSelectedComponent] = useState("Stopwatch");
+  const [selectedComponent, setSelectedComponent] = useState("Timer");
 
   const renderComponent = () => {
     switch(selectedComponent) {

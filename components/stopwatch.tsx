@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback, act } from "react";
 import { Button } from "./ui/button";
 import axios from "axios";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter} from "next/navigation";
 import useTimerStore from "@/store/timerStore";
 import {
   AlertDialog,
@@ -229,7 +229,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
               <div className="mt-3 w-[50%]">
                 <Select value={activity} onValueChange={(value) => setActivity(value)}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Choose activity" />
+                    <SelectValue placeholder="Stopwatch" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Study">Study</SelectItem>
