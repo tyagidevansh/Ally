@@ -28,8 +28,8 @@ interface TimerProps {
 
 const Timer = ({ onChangeTimer }:TimerProps) => {
   const [totalTime, setTotalTime] = useState(10800); // 180 minutes in seconds
-  const [timeLeft, setTimeLeft] = useState(10);
-  const [isRunning, setIsRunning] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(60);
+  const {isRunning, setIsRunning} = useTimerStore() as {isRunning: boolean, setIsRunning : (value: boolean) => void};
   const [activity, setActivity] = useState("Study");
   const [isDragging, setIsDragging] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
@@ -37,6 +37,10 @@ const Timer = ({ onChangeTimer }:TimerProps) => {
   const [studyTimeToday, setStudyTimeToday] = useState(0);
   const [quote, setQuote] = useState("");
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const intervalRef = useRef<number | null>(null);
+  
+  const router = useRouter();
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -72,7 +76,15 @@ const Timer = ({ onChangeTimer }:TimerProps) => {
     } catch (error) {
       console.error("Error saving timer log: ", error);
     }
+    router.refresh();
   };
+
+  //do i save the record when the user gives up?
+  const resetTimer = () => {
+    setIsRunning(false);
+    setTimeLeft(totalTime);
+    setTotalTime(10800);
+  }
 
   const percentage = (timeLeft / totalTime) * 100;
   const circumference = 2 * Math.PI * 118;
@@ -215,76 +227,84 @@ const Timer = ({ onChangeTimer }:TimerProps) => {
     getRandomQuote();
   }, [isRunning]);
 
+  useEffect(() => {
+    document.title = isRunning? `${formatTime(timeLeft)} | Ally` : "Ally"
+  }, [timeLeft]);
+
   return (
-    <div className="flex flex-col items-center justify-center max-h-screen select-none">
-      <div className="relative w-60 h-60 mt-20"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
+    <div className="relative h-full flex flex-col items-center select-none">
+  <div className="absolute top-[10%] flex flex-col items-center w-full">
+    <div className="relative w-60 h-60 mb-8"
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+    >
+      <svg 
+        className="w-full h-full transform -rotate-90 cursor-pointer" 
+        ref={svgRef}
       >
-        <svg 
-          className="w-full h-full transform -rotate-90 cursor-pointer " 
-          ref={svgRef}
-        >
-          <circle
-            cx="120"
-            cy="120"
-            r="118"
-            stroke="#2b292e"
-            strokeWidth="4"
-            fill="transparent"
-            className="w-60 h-60"
-          />
-          <circle 
-            cx="120"
-            cy="120"
-            r="118"
-            stroke="#22c55e"
-            strokeWidth="4"
-            fill="transparent"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            className="w-60 h-60"
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-2xl font-bold">{formatTime(timeLeft)}</span>
-        </div>
+        <circle
+          cx="120"
+          cy="120"
+          r="118"
+          stroke="#2b292e"
+          strokeWidth="4"
+          fill="transparent"
+          className="w-60 h-60"
+        />
+        <circle 
+          cx="120"
+          cy="120"
+          r="118"
+          stroke="#22c55e"
+          strokeWidth="4"
+          fill="transparent"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className="w-60 h-60"
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-4xl font-bold">{formatTime(timeLeft)}</span>
       </div>
-      <div className="mb-4 mt-8 w-[25%]">
-            {isRunning ? (
-              <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    onClick={handleStop}
-                    className="bg-red-500 w-full"
-                  >
-                    Give up
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="bg-zinc-200 dark:bg-zinc-800 text-black dark:text-white">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure you want to stop the timer?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Stopping the timer will save this record.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setShowAlert(false)}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={confirmStop}>End session</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            ) : (
+    </div>
+    
+    <div className="flex flex-col items-center w-full max-w-[350px]">
+      <div className="mb-4 w-[50%]">
+        {isRunning ? (
+          <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
+            <AlertDialogTrigger asChild>
               <Button
-                onClick={startTimer}
-                className="bg-green-500 w-full"
+                onClick={handleStop}
+                className="bg-red-500 w-full"
               >
-                Start
+                Give up
               </Button>
-            )}
-          </div>
-      <div className="mt-3 w-[25%]">
+            </AlertDialogTrigger>
+            <AlertDialogContent className="bg-zinc-200 dark:bg-zinc-800 text-black dark:text-white">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to stop the timer?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Keep pushing and reach your goal!
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setShowAlert(false)}>Keep going</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmStop}>Give up</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : (
+          <Button
+            onClick={startTimer}
+            className="bg-green-500 w-full"
+          >
+            Start
+          </Button>
+        )}
+      </div>
+      
+      <div className="mt-3 w-[50%]">
         <Select onValueChange={onChangeTimer}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Timer" />
@@ -296,7 +316,8 @@ const Timer = ({ onChangeTimer }:TimerProps) => {
           </SelectContent>
         </Select>
       </div>
-      <div className="mt-3 w-[25%]">
+      
+      <div className="mt-3 w-[50%]">
         <Select value={activity} onValueChange={(value) => setActivity(value)}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Stopwatch" />
@@ -308,13 +329,17 @@ const Timer = ({ onChangeTimer }:TimerProps) => {
           </SelectContent>
         </Select>
       </div>
-      <div className="text-zinc-900 dark:text-zinc-300 mt-3 text-center">
+      
+      <div className="text-zinc-900 dark:text-zinc-300 mt-4 text-center">
         Focused {formatTimeForDaily(studyTimeToday)} today
       </div>
-      <div className="mt-16 text-zinc-900 dark:text-zinc-200 bottom-6 text-center">
-          {quote}
-        </div>
     </div>
+    
+    <div className="mt-16 text-zinc-900 dark:text-zinc-200 bottom-4 text-center">
+      {quote}
+    </div>
+  </div>
+</div>
   );
 };
 

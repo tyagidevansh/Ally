@@ -7,7 +7,7 @@ import Timer from "@/components/timer";
 import Pomodoro from "@/components/pomodoro";
 
 const Home = () => {
-  const [selectedComponent, setSelectedComponent] = useState("Timer");
+  const [selectedComponent, setSelectedComponent] = useState("Stopwatch");
 
   const renderComponent = () => {
     switch(selectedComponent) {

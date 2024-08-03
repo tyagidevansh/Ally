@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, act } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Button } from "./ui/button";
 import axios from "axios";
 import { useRouter} from "next/navigation";
@@ -36,7 +36,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
   const [quote, setQuote] = useState("");
   const [studyTimeToday, setStudyTimeToday] = useState(0);
   const startTimeRef = useRef<number | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
+  const intervalRef = useRef<number | null>(null);
   const router = useRouter();
 
   const quotes = [
@@ -90,7 +90,6 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
     if (startTimeRef.current !== null) {
       const elapsedTime = Date.now() - startTimeRef.current;
       setElapsedTime(elapsedTime);
-      animationFrameRef.current = requestAnimationFrame(updateTimer);
     }
   }, []);
 
@@ -98,7 +97,10 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
     const startTime = Date.now();
     startTimeRef.current = startTime;
     setIsRunning(true);
-    animationFrameRef.current = requestAnimationFrame(updateTimer);
+    intervalRef.current = window.setInterval(() => {
+      updateTimer();
+      document.title = `${formatTime(Date.now() - startTime)} | Ally`;
+    }, 1000);
   }, [updateTimer]);
 
   const stopTimer = useCallback(async () => {
@@ -106,8 +108,8 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
       const endTime = Date.now();
       const duration = endTime - startTimeRef.current;
       setIsRunning(false);
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
       }
 
       try {
@@ -123,14 +125,15 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
       }
       setElapsedTime(0);
       startTimeRef.current = null;
+      document.title = "Ally";
       router.refresh();
     }
   }, [router, activity]);
 
   useEffect(() => {
     return () => {
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
       }
     };
   }, []);
@@ -167,10 +170,10 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
 
   useEffect(() => {
     console.log(activity);
-  }, [activity])
+  }, [activity]);
 
   return (
-    <div className="relative h-full flex flex-col items-center">
+    <div className="relative h-full flex flex-col items-center select-none">
       <div className="absolute top-[10%] flex flex-col items-center w-full">
         <div className="flex flex-col items-center justify-center w-60 h-60 border-4 border-green-500 rounded-full mb-8">
           <div className="text-4xl">{formatTime(elapsedTime)}</div>
@@ -216,7 +219,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
               <div className="mt-3 w-[50%]">
                 <Select onValueChange={onChangeTimer}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Change type" />
+                    <SelectValue placeholder="Stopwatch" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Stopwatch">Stopwatch</SelectItem>
@@ -239,7 +242,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                 </Select>
               </div>
               
-              <div className="text-zinc-900 dark:text-zinc-300 mt-3 text-center">
+              <div className="text-zinc-900 dark:text-zinc-300 mt-4 text-center">
                 Focused {formatTimeForDaily(studyTimeToday)} today
               </div>
             </>
