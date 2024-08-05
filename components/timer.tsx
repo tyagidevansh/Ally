@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { Button } from "./ui/button";
 import axios from "axios";
-import { useRouter} from "next/navigation";
+import { useRouter } from "next/navigation";
 import useTimerStore from "@/store/timerStore";
 import {
   Select,
@@ -26,72 +26,97 @@ interface TimerProps {
   onChangeTimer: (value: string) => void;
 }
 
-const Timer = ({ onChangeTimer }:TimerProps) => {
+const Timer = ({ onChangeTimer }: TimerProps) => {
   const [totalTime, setTotalTime] = useState(10800); // 180 minutes in seconds
   const [timeLeft, setTimeLeft] = useState(60);
-  const {isRunning, setIsRunning} = useTimerStore() as {isRunning: boolean, setIsRunning : (value: boolean) => void};
+  const { isRunning, setIsRunning } = useTimerStore() as { isRunning: boolean, setIsRunning: (value: boolean) => void };
   const [activity, setActivity] = useState("Study");
   const [isDragging, setIsDragging] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
-  const [startTime, setStartTime] = useState(0);
   const [studyTimeToday, setStudyTimeToday] = useState(0);
   const [quote, setQuote] = useState("");
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
-  const intervalRef = useRef<number | null>(null);
+  const selectedTimeRef = useRef<number>(10800);
   
   const router = useRouter();
 
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (timeLeft == 0) {
-      stopTimer();
+  const updateTimer = useCallback(() => {
+    if (startTimeRef.current !== null) {
+      const elapsedTime = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      const newTimeLeft = Math.max(0, selectedTimeRef.current - elapsedTime);
+      setTimeLeft(newTimeLeft);
+      
+      if (newTimeLeft === 0) {
+        stopTimer();
+      } else {
+        //just to cancel the animation later on
+        timerRef.current = requestAnimationFrame(updateTimer);
+      }
     }
-    if (isRunning && timeLeft > 0) {
-      timer = setInterval(() => {
-        setTimeLeft((prevTime) => prevTime - 1);
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [isRunning, timeLeft]);
+  }, []);
 
-  const startTimer = () => {
+  const startTimer = useCallback(() => {
+    startTimeRef.current = Date.now();
+    selectedTimeRef.current = timeLeft;
     setIsRunning(true);
     setTotalTime(timeLeft);
-    setStartTime(Date.now());
-  };
+    timerRef.current = requestAnimationFrame(updateTimer);
+  }, [updateTimer, setIsRunning, timeLeft]);
 
-  const stopTimer = async () => {
+  const stopTimer = useCallback(async () => {
+    if (timerRef.current !== null) {
+      cancelAnimationFrame(timerRef.current);
+    }
     setIsRunning(false);
-    setTimeLeft(totalTime);
-    setTotalTime(10800);
+    const endTime = Date.now();
+    const duration = endTime - (startTimeRef.current ?? endTime);
     
     try {
       const response = await axios.post("/api/timer-log", {
-        startTime: new Date(startTime).toISOString(),
-        endTime: new Date(Date.now()).toISOString(),
-        duration: Date.now() - startTime,
+        startTime: new Date(startTimeRef.current ?? endTime).toISOString(),
+        endTime: new Date(endTime).toISOString(),
+        duration,
         activity,
       });
     } catch (error) {
       console.error("Error saving timer log: ", error);
     }
-    router.refresh();
-  };
-
-  //do i save the record when the user gives up?
-  const resetTimer = () => {
-    setIsRunning(false);
-    setTimeLeft(totalTime);
+    
+    startTimeRef.current = null;
+    setTimeLeft(selectedTimeRef.current);
     setTotalTime(10800);
-  }
+    router.refresh();
+  }, [setIsRunning, activity, router]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) {
+        cancelAnimationFrame(timerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    document.title = isRunning ? `${formatTime(timeLeft)} | Ally` : "Ally";
+  }, [timeLeft, isRunning]);
+
+  const resetTimer = () => {
+    if (timerRef.current !== null) {
+      cancelAnimationFrame(timerRef.current);
+    }
+    setIsRunning(false);
+    setTimeLeft(10800);
+    selectedTimeRef.current = 10800;
+    startTimeRef.current = null;
+  };
 
   const percentage = (timeLeft / totalTime) * 100;
   const circumference = 2 * Math.PI * 118;
   const offset = circumference - (percentage / 100) * circumference;
 
   const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
-    console.log("mouse clicked!");
     if (!isRunning) {
       setIsDragging(true);
       updateTime(event);
@@ -126,12 +151,13 @@ const Timer = ({ onChangeTimer }:TimerProps) => {
     percentage = (100 - percentage + 25) % 100;
 
     let newTime = Math.round((percentage / 100) * totalTime);
-    console.log(newTime);
     newTime = Math.round(newTime / 600) * 600; //round to nearest 10 minutes
     newTime = Math.max(600, Math.min(newTime, totalTime)); //clamp between 10 minutes and 3 hours
 
     setTimeLeft(newTime);
+    selectedTimeRef.current = newTime;
   };
+
 
   const formatTime = (time: number) => {
     const hours = Math.floor(time / 3600);
@@ -163,7 +189,7 @@ const Timer = ({ onChangeTimer }:TimerProps) => {
     } else {
       return `${seconds} sec`;
     }
-  }
+  };
 
   useEffect(() => {
     const handleGlobalMouseUp = () => setIsDragging(false);
@@ -204,7 +230,7 @@ const Timer = ({ onChangeTimer }:TimerProps) => {
   const getRandomQuote = () => {
     const randomQuote = Math.floor(Math.random() * quotes.length);
     setQuote(quotes[randomQuote]);
-  }
+  };
 
   const fetchTodayStudyTime = async () => {
     try {
@@ -227,47 +253,43 @@ const Timer = ({ onChangeTimer }:TimerProps) => {
     getRandomQuote();
   }, [isRunning]);
 
-  useEffect(() => {
-    document.title = isRunning? `${formatTime(timeLeft)} | Ally` : "Ally"
-  }, [timeLeft]);
-
   return (
     <div className="relative h-full flex flex-col items-center select-none">
-  <div className="absolute top-[10%] flex flex-col items-center w-full">
-    <div className="relative w-60 h-60 mb-8"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-    >
-      <svg 
-        className="w-full h-full transform -rotate-90 cursor-pointer" 
-        ref={svgRef}
-      >
-        <circle
-          cx="120"
-          cy="120"
-          r="118"
-          stroke="#2b292e"
-          strokeWidth="4"
-          fill="transparent"
-          className="w-60 h-60"
-        />
-        <circle 
-          cx="120"
-          cy="120"
-          r="118"
-          stroke="#22c55e"
-          strokeWidth="4"
-          fill="transparent"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          className="w-60 h-60"
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-4xl font-bold">{formatTime(timeLeft)}</span>
-      </div>
-    </div>
+      <div className="absolute top-[10%] flex flex-col items-center w-full">
+        <div className="relative w-60 h-60 mb-8"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+        >
+          <svg 
+            className="w-full h-full transform -rotate-90 cursor-pointer" 
+            ref={svgRef}
+          >
+            <circle
+              cx="120"
+              cy="120"
+              r="118"
+              stroke="#2b292e"
+              strokeWidth="4"
+              fill="transparent"
+              className="w-60 h-60"
+            /> 
+            <circle 
+              cx="120"
+              cy="120"
+              r="118"
+              stroke="#22c55e"
+              strokeWidth="4"
+              fill="transparent"
+              strokeDasharray={circumference}
+              strokeDashoffset={offset}
+              className="w-60 h-60"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-4xl font-bold">{formatTime(timeLeft)}</span>
+          </div>
+        </div>
     
     <div className="flex flex-col items-center w-full max-w-[350px]">
       <div className="mb-4 w-[50%]">

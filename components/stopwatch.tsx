@@ -119,7 +119,6 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
           duration,
           activity,
         });
-        console.log("Timer log saved:", response.data);
       } catch (error) {
         console.error("Error saving timer log:", error);
       }
