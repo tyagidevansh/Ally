@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useNotifications } from "@/hooks/use-notification";
 
 interface TimerProps {
   onChangeTimer: (value: string) => void;
@@ -28,7 +29,7 @@ interface TimerProps {
 
 const Timer = ({ onChangeTimer }: TimerProps) => {
   const [totalTime, setTotalTime] = useState(10800); // 180 minutes in seconds
-  const [timeLeft, setTimeLeft] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(5);
   const { isRunning, setIsRunning } = useTimerStore() as { isRunning: boolean, setIsRunning: (value: boolean) => void };
   const [activity, setActivity] = useState("Study");
   const [isDragging, setIsDragging] = useState(false);
@@ -39,8 +40,42 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const selectedTimeRef = useRef<number>(10800);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   
   const router = useRouter();
+  const { sendNotification } = useNotifications();
+
+  const formatTime = (time: number) => {
+    const hours = Math.floor(time / 3600);
+    const minutes = Math.floor((time % 3600) / 60);
+    const seconds = Math.floor((time % 60));
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds
+        .toString()
+        .padStart(2, "0")}`;
+    } else if (minutes > 0) {
+      return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    } else {
+      return `${seconds}`;
+    }
+  };
+
+  const formatTimeForDaily = (time: number) => {
+    const hours = Math.floor(time / 3600000);
+    const minutes = Math.floor((time % 3600000) / 60000);
+    const seconds = Math.floor((time % 60000) / 1000);
+
+    if (hours > 0) {
+      return `${hours} hr ${minutes.toString().padStart(2, "0")} min ${seconds
+        .toString()
+        .padStart(2, "0")} sec`;
+    } else if (minutes > 0) {
+      return `${minutes} min ${seconds.toString().padStart(2, "0")} sec`;
+    } else {
+      return `${seconds} sec`;
+    }
+  };
 
   const updateTimer = useCallback(() => {
     if (startTimeRef.current !== null) {
@@ -50,24 +85,35 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
       
       if (newTimeLeft === 0) {
         stopTimer();
+        sendNotification("Timer completed!", {body: "Restart the timer if you want to keep going", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
       } else {
-        //just to cancel the animation later on
         timerRef.current = requestAnimationFrame(updateTimer);
       }
     }
   }, []);
-
+  
   const startTimer = useCallback(() => {
     startTimeRef.current = Date.now();
     selectedTimeRef.current = timeLeft;
     setIsRunning(true);
     setTotalTime(timeLeft);
     timerRef.current = requestAnimationFrame(updateTimer);
-  }, [updateTimer, setIsRunning, timeLeft]);
 
+    const intervalId = setInterval(() => {
+      const elapsedTime = Math.floor((Date.now() - startTimeRef.current!) / 1000);
+      const newTimeLeft = Math.max(0, selectedTimeRef.current - elapsedTime);
+      document.title = `${formatTime(newTimeLeft)} | Ally`;
+    }, 1000);
+  
+    intervalRef.current = intervalId;
+  }, [updateTimer, setIsRunning, timeLeft, formatTime]);
+  
   const stopTimer = useCallback(async () => {
     if (timerRef.current !== null) {
       cancelAnimationFrame(timerRef.current);
+    }
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
     }
     setIsRunning(false);
     const endTime = Date.now();
@@ -87,30 +133,20 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     startTimeRef.current = null;
     setTimeLeft(selectedTimeRef.current);
     setTotalTime(10800);
+    document.title = "Ally";
     router.refresh();
   }, [setIsRunning, activity, router]);
-
+  
   useEffect(() => {
     return () => {
       if (timerRef.current !== null) {
         cancelAnimationFrame(timerRef.current);
       }
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+      }
     };
   }, []);
-
-  useEffect(() => {
-    document.title = isRunning ? `${formatTime(timeLeft)} | Ally` : "Ally";
-  }, [timeLeft, isRunning]);
-
-  const resetTimer = () => {
-    if (timerRef.current !== null) {
-      cancelAnimationFrame(timerRef.current);
-    }
-    setIsRunning(false);
-    setTimeLeft(10800);
-    selectedTimeRef.current = 10800;
-    startTimeRef.current = null;
-  };
 
   const percentage = (timeLeft / totalTime) * 100;
   const circumference = 2 * Math.PI * 118;
@@ -158,38 +194,6 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     selectedTimeRef.current = newTime;
   };
 
-
-  const formatTime = (time: number) => {
-    const hours = Math.floor(time / 3600);
-    const minutes = Math.floor((time % 3600) / 60);
-    const seconds = Math.floor((time % 60));
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds
-        .toString()
-        .padStart(2, "0")}`;
-    } else if (minutes > 0) {
-      return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-    } else {
-      return `${seconds}`;
-    }
-  };
-
-  const formatTimeForDaily = (time: number) => {
-    const hours = Math.floor(time / 3600000);
-    const minutes = Math.floor((time % 3600000) / 60000);
-    const seconds = Math.floor((time % 60000) / 1000);
-
-    if (hours > 0) {
-      return `${hours} hr ${minutes.toString().padStart(2, "0")} min ${seconds
-        .toString()
-        .padStart(2, "0")} sec`;
-    } else if (minutes > 0) {
-      return `${minutes} min ${seconds.toString().padStart(2, "0")} sec`;
-    } else {
-      return `${seconds} sec`;
-    }
-  };
 
   useEffect(() => {
     const handleGlobalMouseUp = () => setIsDragging(false);
