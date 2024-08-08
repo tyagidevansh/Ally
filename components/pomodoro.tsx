@@ -28,10 +28,10 @@ interface TimerProps {
 }
 
 const Pomodoro = ({ onChangeTimer }: TimerProps) => {
-  const [totalTime, setTotalTime] = useState(1500);
+  const [totalTime, setTotalTime] = useState(5);
   const [isBreak, setIsBreak] = useState(false);
   const [intervalsRemaining, setIntervalsRemaining] = useState(4);
-  const [timeLeft, setTimeLeft] = useState(1500);
+  const [timeLeft, setTimeLeft] = useState(5);
   const { isRunning, setIsRunning } = useTimerStore() as { isRunning: boolean, setIsRunning: (value: boolean) => void };
   const [activity, setActivity] = useState("Study");
   const [isDragging, setIsDragging] = useState(false);
@@ -108,7 +108,7 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
     }, 1000);
   
     intervalRef.current = intervalId;
-  }, [updateTimer, setIsRunning, timeLeft, formatTime]);
+  }, [timeLeft, setIsRunning, setTotalTime, updateTimer, formatTime]);
   
   const stopTimer = useCallback(async () => {
     if (timerRef.current !== null) {
@@ -149,32 +149,47 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
     setIsRunning(false);
     const endTime = Date.now();
     const duration = endTime - (startTimeRef.current ?? endTime);
-    
-    try {
-      const response = await axios.post("/api/timer-log", {
-      startTime: new Date(startTimeRef.current ?? endTime).toISOString(),
-      endTime: new Date(endTime).toISOString(),
-      duration,
-      activity,
-      });
-    } catch (error) {
-      console.error("Error saving timer log: ", error);
+  
+    if (!isBreak) {
+      try {
+        const response = await axios.post("/api/timer-log", {
+          startTime: new Date(startTimeRef.current ?? endTime).toISOString(),
+          endTime: new Date(endTime).toISOString(),
+          duration,
+          activity,
+        });
+      } catch (error) {
+        console.error("Error saving timer log: ", error);
+      }
     }
-    
+  
     startTimeRef.current = null;
+  
     if (intervalsRemaining > 0) {
       if (isBreak) {
-        setIntervalsRemaining(intervalsRemaining - 1);
-        setTotalTime(1500);
+        setIntervalsRemaining(prev => prev - 1);
+        setIsBreak(false);
+        setTotalTime(5); // Set work time after break
       } else {
-        setTotalTime(300);
+        setIsBreak(true);
+        setTotalTime(3); // Set break time after work session
       }
+      startTimer();
     } else {
-      setTotalTime(1250);
+      setTotalTime(4);
       setIntervalsRemaining(4);
+      setIsBreak(false);
+      startTimer();
     }
-
-  }, [setIsRunning, activity, router]);
+  }, [
+    activity,
+    intervalsRemaining,
+    isBreak,
+    router,
+    setIsRunning,
+    startTimer,
+  ]);
+  
 
   useEffect(() => {
     return () => {
