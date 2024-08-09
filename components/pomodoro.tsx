@@ -30,7 +30,7 @@ interface TimerProps {
 const Pomodoro = ({ onChangeTimer }: TimerProps) => {
   const [totalTime, setTotalTime] = useState(5);
   const [isBreak, setIsBreak] = useState(false);
-  const [intervalsRemaining, setIntervalsRemaining] = useState(4);
+  const [intervalsRemaining, setIntervalsRemaining] = useState(8);
   const [timeLeft, setTimeLeft] = useState(5);
   const { isRunning, setIsRunning } = useTimerStore() as { isRunning: boolean, setIsRunning: (value: boolean) => void };
   const [activity, setActivity] = useState("Study");
@@ -41,7 +41,7 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
-  const selectedTimeRef = useRef<number>(10800);
+  const selectedTimeRef = useRef<number>(5);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   
   const router = useRouter();
@@ -87,20 +87,21 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
       
       if (newTimeLeft === 0) {
         handleIntervalChange();
-        sendNotification("Timer completed!", {body: "Restart the timer if you want to keep going", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
+        //sendNotification("Timer completed!", {body: "Restart the timer if you want to keep going", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
       } else {
         timerRef.current = requestAnimationFrame(updateTimer);
       }
     }
   }, []);
   
-  const startTimer = useCallback(() => {
+  const startTimer = useCallback((startTime = timeLeft) => {
     startTimeRef.current = Date.now();
-    selectedTimeRef.current = timeLeft;
+    selectedTimeRef.current = startTime;
     setIsRunning(true);
-    setTotalTime(timeLeft);
+    setIntervalsRemaining(intervalsRemaining - 1);
+    setTotalTime(startTime);
     timerRef.current = requestAnimationFrame(updateTimer);
-
+  
     const intervalId = setInterval(() => {
       const elapsedTime = Math.floor((Date.now() - startTimeRef.current!) / 1000);
       const newTimeLeft = Math.max(0, selectedTimeRef.current - elapsedTime);
@@ -108,7 +109,7 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
     }, 1000);
   
     intervalRef.current = intervalId;
-  }, [timeLeft, setIsRunning, setTotalTime, updateTimer, formatTime]);
+  }, [timeLeft, setIsRunning, updateTimer, formatTime]);
   
   const stopTimer = useCallback(async () => {
     if (timerRef.current !== null) {
@@ -134,62 +135,34 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
     
     startTimeRef.current = null;
     setTimeLeft(selectedTimeRef.current);
-    setTotalTime(1500);
+    //setTotalTime(1500);
     document.title = "Ally";
     router.refresh();
-  }, [setIsRunning, activity, router]);
+  }, [setIsRunning, activity, router, isBreak, setIsBreak]);
   
   const handleIntervalChange = useCallback(async () => {
-    if (timerRef.current !== null) {
-      cancelAnimationFrame(timerRef.current);
-    }
-    if (intervalRef.current !== null) {
-      clearInterval(intervalRef.current);
-    }
-    setIsRunning(false);
-    const endTime = Date.now();
-    const duration = endTime - (startTimeRef.current ?? endTime);
-  
-    if (!isBreak) {
-      try {
-        const response = await axios.post("/api/timer-log", {
-          startTime: new Date(startTimeRef.current ?? endTime).toISOString(),
-          endTime: new Date(endTime).toISOString(),
-          duration,
-          activity,
-        });
-      } catch (error) {
-        console.error("Error saving timer log: ", error);
-      }
-    }
-  
-    startTimeRef.current = null;
-  
-    if (intervalsRemaining > 0) {
-      if (isBreak) {
-        setIntervalsRemaining(prev => prev - 1);
-        setIsBreak(false);
-        setTotalTime(5); // Set work time after break
+    console.log("interval change triggered!");
+    await stopTimer();
+    
+    setIsBreak((prevIsBreak) => {
+      let newIsBreak;
+      let newTime;
+      if (intervalsRemaining == 4) {
+        setIntervalsRemaining(8);
+        newTime = 4;
+        newIsBreak = true;
       } else {
-        setIsBreak(true);
-        setTotalTime(3); // Set break time after work session
+        newIsBreak = !prevIsBreak;
+        console.log("New isBreak value:", newIsBreak);
+        newTime = newIsBreak ? 3 : 5;
       }
-      startTimer();
-    } else {
-      setTotalTime(4);
-      setIntervalsRemaining(4);
-      setIsBreak(false);
-      startTimer();
-    }
-  }, [
-    activity,
-    intervalsRemaining,
-    isBreak,
-    router,
-    setIsRunning,
-    startTimer,
-  ]);
+      console.log(intervalsRemaining);
+      startTimer(newTime);
+      return newIsBreak;
+    });
   
+    
+  }, [stopTimer, startTimer]);
 
   useEffect(() => {
     return () => {
@@ -376,7 +349,7 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
           </AlertDialog>
         ) : (
           <Button
-            onClick={startTimer}
+            onClick={() => startTimer(5)}
             className="bg-green-500 w-full"
           >
             Start
