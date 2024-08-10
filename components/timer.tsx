@@ -29,7 +29,7 @@ interface TimerProps {
 
 const Timer = ({ onChangeTimer }: TimerProps) => {
   const [totalTime, setTotalTime] = useState(10800); // 180 minutes in seconds
-  const [timeLeft, setTimeLeft] = useState(5);
+  const [timeLeft, setTimeLeft] = useState(600);
   const { isRunning, setIsRunning } = useTimerStore() as { isRunning: boolean, setIsRunning: (value: boolean) => void };
   const [activity, setActivity] = useState("Study");
   const [isDragging, setIsDragging] = useState(false);
@@ -331,7 +331,10 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
       </div>
       
       <div className="mt-3 w-[50%]">
-        <Select onValueChange={onChangeTimer}>
+        <Select 
+          onValueChange={onChangeTimer}
+          disabled = {isRunning}
+        >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Timer" />
           </SelectTrigger>
@@ -344,7 +347,11 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
       </div>
       
       <div className="mt-3 w-[50%]">
-        <Select value={activity} onValueChange={(value) => setActivity(value)}>
+          <Select 
+            value={activity} 
+            onValueChange={(value) => setActivity(value)}
+            disabled = {isRunning}
+          >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Stopwatch" />
           </SelectTrigger>

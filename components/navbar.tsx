@@ -11,7 +11,7 @@ const Navbar = () => {
     <nav className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-900">
       <div className="flex items-center space-x-4">
         <Link href="/" className="text-black dark:text-white hover:text-gray-700 dark:hover:text-gray-300">
-          <div className="relative w-14 h-9">
+          <div className="relative w-16 h-10">
             <Image
               src="/logo-dark.png"
               alt="Logo Light"
@@ -27,16 +27,16 @@ const Navbar = () => {
           </div>
         </Link>
         
-        <Link href="/about" className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300">
+        {/* <Link href="/about" className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300">
           About
         </Link>
         <Link href="/services" className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300">
           Services
-        </Link>
+        </Link> */}
       </div>
       
       <div className="flex items-center space-x-4">
-        {isRunning ? (<Timer/>) : (<TimerOff/>) }
+        {/* {isRunning ? (<Timer/>) : (<TimerOff/>) } */}
         <ModeToggle />
         <UserButton/>
       </div>

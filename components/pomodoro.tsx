@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { Button } from "./ui/button";
+import { motion, AnimatePresence } from 'framer-motion';
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import useTimerStore from "@/store/timerStore";
@@ -21,27 +22,34 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
 import { useNotifications } from "@/hooks/use-notification";
+import { RefreshCcw, SkipForward, Square } from "lucide-react";
 
 interface TimerProps {
   onChangeTimer: (value: string) => void;
 }
 
 const Pomodoro = ({ onChangeTimer }: TimerProps) => {
-  const [totalTime, setTotalTime] = useState(5);
+  const [totalTime, setTotalTime] = useState(1500);
   const [isBreak, setIsBreak] = useState(false);
   const [intervalsRemaining, setIntervalsRemaining] = useState(8);
-  const [timeLeft, setTimeLeft] = useState(5);
+  const [timeLeft, setTimeLeft] = useState(1500);
   const { isRunning, setIsRunning } = useTimerStore() as { isRunning: boolean, setIsRunning: (value: boolean) => void };
   const [activity, setActivity] = useState("Study");
-  const [isDragging, setIsDragging] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [studyTimeToday, setStudyTimeToday] = useState(0);
   const [quote, setQuote] = useState("");
   const svgRef = useRef<SVGSVGElement | null>(null);
   const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
-  const selectedTimeRef = useRef<number>(5);
+  const selectedTimeRef = useRef<number>(1500);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   
   const router = useRouter();
@@ -87,7 +95,19 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
       
       if (newTimeLeft === 0) {
         handleIntervalChange();
-        //sendNotification("Timer completed!", {body: "Restart the timer if you want to keep going", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
+        if (totalTime === 1500) {
+          if (!document.hidden) {
+            sendNotification("Time for a break!", {body: "Rest up and be back in 5!", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
+          } else {
+            sendNotification("25 minutes are up!", {body: "Keep going or return to the site to start the break.", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
+          }
+        } else {
+          if (!document.hidden) {
+            sendNotification("Break's over!", {body: "Time to lock in", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
+          } else {
+            sendNotification("5 minutes are up!", {body: "Return to the website when you're ready to start focusing.", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
+          }
+        }
       } else {
         timerRef.current = requestAnimationFrame(updateTimer);
       }
@@ -121,18 +141,23 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
     setIsRunning(false);
     const endTime = Date.now();
     const duration = endTime - (startTimeRef.current ?? endTime);
-    
-    try {
-      const response = await axios.post("/api/timer-log", {
-        startTime: new Date(startTimeRef.current ?? endTime).toISOString(),
-        endTime: new Date(endTime).toISOString(),
-        duration,
-        activity,
-      });
-    } catch (error) {
-      console.error("Error saving timer log: ", error);
+    console.log(duration)
+
+    if (duration > 295000 && duration < 305000) {
+      //do nothing
+    } else {
+      try {
+        const response = await axios.post("/api/timer-log", {
+          startTime: new Date(startTimeRef.current ?? endTime).toISOString(),
+          endTime: new Date(endTime).toISOString(),
+          duration,
+          activity,
+        });
+      } catch (error) {
+        console.error("Error saving timer log: ", error);
+      }
     }
-    
+
     startTimeRef.current = null;
     setTimeLeft(selectedTimeRef.current);
     //setTotalTime(1500);
@@ -154,15 +179,29 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
       } else {
         newIsBreak = !prevIsBreak;
         console.log("New isBreak value:", newIsBreak);
-        newTime = newIsBreak ? 3 : 5;
+        newTime = newIsBreak ? 300 : 1500;
       }
       console.log(intervalsRemaining);
       startTimer(newTime);
       return newIsBreak;
     });
-  
-    
   }, [stopTimer, startTimer]);
+
+  const handleReset = () => {
+    startTimeRef.current = Date.now();
+    setTimeLeft(totalTime);
+  }
+
+  const handleSkip = () => {
+    //stopTimer();
+    if (totalTime == 1500) {
+      setTotalTime(300);
+      setTimeLeft(300);
+    } else {
+      setTotalTime(1500);
+      setTimeLeft(1500);
+    }
+  }
 
   useEffect(() => {
     return () => {
@@ -178,23 +217,6 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
   const percentage = (timeLeft / totalTime) * 100;
   const circumference = 2 * Math.PI * 118;
   const offset = circumference - (percentage / 100) * circumference;
-
-  const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!isRunning) {
-      setIsDragging(true);
-      updateTime(event);
-    }
-  };
-
-  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (isDragging && !isRunning) {
-      updateTime(event);
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
 
   const updateTime = (event: React.MouseEvent<HTMLDivElement>) => {
     const svg = svgRef.current;
@@ -219,25 +241,7 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
 
     setTimeLeft(newTime);
     selectedTimeRef.current = newTime;
-  };
-
-
-  useEffect(() => {
-    const handleGlobalMouseUp = () => setIsDragging(false);
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (isDragging && !isRunning && svgRef.current) {
-        updateTime(e as unknown as React.MouseEvent<HTMLDivElement>);
-      }
-    };
-
-    document.addEventListener('mouseup', handleGlobalMouseUp);
-    document.addEventListener('mousemove', handleGlobalMouseMove);
-
-    return () => {
-      document.removeEventListener('mouseup', handleGlobalMouseUp);
-      document.removeEventListener('mousemove', handleGlobalMouseMove);
-    };
-  }, [isDragging, isRunning]);
+  }; 
 
   const handleStop = () => {
     setShowAlert(true);
@@ -246,6 +250,9 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
   const confirmStop = () => {
     stopTimer();
     setShowAlert(false);
+    setTotalTime(1500);
+    setTimeLeft(1500);
+    router.refresh();
   };
 
   const quotes = [
@@ -287,11 +294,7 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
   return (
     <div className="relative h-full flex flex-col items-center select-none">
       <div className="absolute top-[10%] flex flex-col items-center w-full">
-        <div className="relative w-60 h-60 mb-8"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-        >
+        <div className="relative w-60 h-60 mb-8">
           <svg 
             className="w-full h-full transform -rotate-90 cursor-pointer" 
             ref={svgRef}
@@ -317,76 +320,142 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
               className="w-60 h-60"
             />
           </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-4xl font-bold">{formatTime(timeLeft)}</span>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className="text-4xl font-bold mt-2">{formatTime(timeLeft)}</div>
+            <div className="text-2xl font-bold mt-2">{totalTime === 1500 ? "Focus" : "Break"}</div>
           </div>
         </div>
     
     <div className="flex flex-col items-center w-full max-w-[350px]">
       <div className="mb-4 w-[50%]">
-        {isRunning ? (
-          <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
-            <AlertDialogTrigger asChild>
+        <AnimatePresence mode="wait">
+          {!isRunning ? (
+            <motion.div
+              key="start"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
               <Button
-                onClick={handleStop}
-                className="bg-red-500 w-full"
+                onClick={() => startTimer(1500)}
+                className="bg-green-500 w-full py-2"
               >
-                Give up
+                Start
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="bg-zinc-200 dark:bg-zinc-800 text-black dark:text-white">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure you want to stop the timer?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Keep pushing and reach your goal!
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setShowAlert(false)}>Keep going</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmStop}>Give up</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        ) : (
-          <Button
-            onClick={() => startTimer(5)}
-            className="bg-green-500 w-full"
-          >
-            Start
-          </Button>
-        )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="controls"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.3 }}
+              className="flex justify-center items-center space-x-4"
+            >
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                className="p-2 bg-blue-500 rounded-full text-white"
+              >
+                <RefreshCcw size={24} onClick={handleReset} />
+              </motion.button>
+              
+              <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
+                <AlertDialogTrigger asChild>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleStop}
+                    className="p-3 bg-red-500 rounded-full text-white"
+                  >
+                    <Square size={32} />
+                  </motion.button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="bg-zinc-200 dark:bg-zinc-800 text-black dark:text-white">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure you want to stop the timer?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Keep pushing and reach your goal!
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setShowAlert(false)}>Keep going</AlertDialogCancel>
+                    <AlertDialogAction onClick={confirmStop}>Give up</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                className="p-2 bg-green-500 rounded-full text-white"
+              >
+                <SkipForward size={24} onClick={handleSkip} />
+              </motion.button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        </div>
+    </div>
+
+    <TooltipProvider>
+      <div className="mt-3 w-[25%]">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div>
+              <Select 
+                onValueChange={onChangeTimer}
+                disabled={isRunning}
+              >
+                <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <SelectValue placeholder="Pomodoro" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Stopwatch">Stopwatch</SelectItem>
+                  <SelectItem value="Timer">Timer</SelectItem>
+                  <SelectItem value="Pomodoro">Pomodoro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{isRunning ? "Timer type cannot be changed while running" : "Select timer type"}</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
       
-      <div className="mt-3 w-[50%]">
-        <Select onValueChange={onChangeTimer}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Pomodoro" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Stopwatch">Stopwatch</SelectItem>
-            <SelectItem value="Timer">Timer</SelectItem>
-            <SelectItem value="Pomodoro">Pomodoro</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="mt-3 w-[25%]">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div>
+              <Select 
+                value={activity} 
+                onValueChange={(value) => setActivity(value)}
+                disabled={isRunning}
+              >
+                <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <SelectValue placeholder="Stopwatch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Study">Study</SelectItem>
+                  <SelectItem value="Workout">Workout</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{isRunning ? "Activity cannot be changed while timer is running" : "Select activity"}</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
-      
-      <div className="mt-3 w-[50%]">
-        <Select value={activity} onValueChange={(value) => setActivity(value)}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Stopwatch" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Study">Study</SelectItem>
-            <SelectItem value="Other">Other</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      
+    </TooltipProvider>
+    
       <div className="text-zinc-900 dark:text-zinc-300 mt-4 text-center">
         Focused {formatTimeForDaily(studyTimeToday)} today
       </div>
-    </div>
-    
+
     <div className="mt-16 text-zinc-900 dark:text-zinc-200 bottom-4 text-center">
       {quote}
     </div>

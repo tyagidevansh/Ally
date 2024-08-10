@@ -216,7 +216,10 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
           {!autoStart && (
             <>
               <div className="mt-3 w-[50%]">
-                <Select onValueChange={onChangeTimer}>
+              <Select 
+                onValueChange={onChangeTimer}
+                disabled = {isRunning}
+              >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Stopwatch" />
                   </SelectTrigger>
@@ -229,7 +232,11 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
               </div>
               
               <div className="mt-3 w-[50%]">
-                <Select value={activity} onValueChange={(value) => setActivity(value)}>
+                <Select 
+                  value={activity} 
+                  onValueChange={(value) => setActivity(value)}
+                  disabled = {isRunning}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Stopwatch" />
                   </SelectTrigger>
