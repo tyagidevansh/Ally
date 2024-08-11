@@ -143,7 +143,7 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
     const duration = endTime - (startTimeRef.current ?? endTime);
     console.log(duration)
 
-    if (duration > 295000 && duration < 305000) {
+    if (totalTime == 300) {
       //do nothing
     } else {
       try {
@@ -161,9 +161,8 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
     startTimeRef.current = null;
     setTimeLeft(selectedTimeRef.current);
     //setTotalTime(1500);
-    document.title = "Ally";
     router.refresh();
-  }, [setIsRunning, activity, router, isBreak, setIsBreak]);
+  }, [setIsRunning, activity, router, isBreak, setIsBreak, totalTime]);
   
   const handleIntervalChange = useCallback(async () => {
     console.log("interval change triggered!");
@@ -195,11 +194,9 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
   const handleSkip = () => {
     //stopTimer();
     if (totalTime == 1500) {
-      setTotalTime(300);
-      setTimeLeft(300);
+      startTimer(300);
     } else {
-      setTotalTime(1500);
-      setTimeLeft(1500);
+      startTimer(1500);
     }
   }
 
@@ -218,31 +215,6 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
   const circumference = 2 * Math.PI * 118;
   const offset = circumference - (percentage / 100) * circumference;
 
-  const updateTime = (event: React.MouseEvent<HTMLDivElement>) => {
-    const svg = svgRef.current;
-    if (!svg) return;
-
-    const rect = svg.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-
-    const mouseX = event.clientX - centerX;
-    const mouseY = event.clientY - centerY;
-
-    let angle = Math.atan2(mouseY, mouseX);
-    if (angle < 0) angle += 2 * Math.PI;
-
-    let percentage = (-angle / (2 * Math.PI)) * 100; //angle negative to correct for direction
-    percentage = (100 - percentage + 25) % 100;
-
-    let newTime = Math.round((percentage / 100) * totalTime);
-    newTime = Math.round(newTime / 600) * 600; //round to nearest 10 minutes
-    newTime = Math.max(600, Math.min(newTime, totalTime)); //clamp between 10 minutes and 3 hours
-
-    setTimeLeft(newTime);
-    selectedTimeRef.current = newTime;
-  }; 
-
   const handleStop = () => {
     setShowAlert(true);
   };
@@ -250,8 +222,9 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
   const confirmStop = () => {
     stopTimer();
     setShowAlert(false);
-    setTotalTime(1500);
     setTimeLeft(1500);
+    setTotalTime(1500);
+    document.title = "Ally";
     router.refresh();
   };
 
@@ -374,14 +347,14 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
                 </AlertDialogTrigger>
                 <AlertDialogContent className="bg-zinc-200 dark:bg-zinc-800 text-black dark:text-white">
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure you want to stop the timer?</AlertDialogTitle>
+                    <AlertDialogTitle>Are you sure you want to end this session?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Keep pushing and reach your goal!
+                      End the session if you are done studying.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel onClick={() => setShowAlert(false)}>Keep going</AlertDialogCancel>
-                    <AlertDialogAction onClick={confirmStop}>Give up</AlertDialogAction>
+                    <AlertDialogAction onClick={confirmStop}>End session</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>

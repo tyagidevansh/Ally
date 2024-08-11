@@ -3,44 +3,73 @@ import Image from 'next/image';
 import { UserButton } from '@clerk/nextjs';
 import { ModeToggle } from '@/components/mode-toggle';
 import useTimerStore from '@/store/timerStore'
-import { Timer, TimerOff } from 'lucide-react';
+import { Timer, TimerOff, BarChart2, BookOpen, Dumbbell, PenTool } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 const Navbar = () => {
   const { isRunning } = useTimerStore() as { isRunning: boolean };
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const isScrolled = window.scrollY > 10;
+      if (isScrolled !== scrolled) {
+        setScrolled(isScrolled);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [scrolled]);
+
   return (
-    <nav className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-900">
-      <div className="flex items-center space-x-4">
-        <Link href="/" className="text-black dark:text-white hover:text-gray-700 dark:hover:text-gray-300">
+    <div>
+    <nav className={`flex fixed top-0 left-0 right-0 mb-20 items-center justify-between p-4 bg-transparent text-white
+      ${scrolled ? 'bg-purple-900/70 backdrop-blur-md shadow-lg' : 'bg-transparent'}
+    "`}>
+      <div className="flex items-center space-x-6">
+        <Link href="/" className="hover:opacity-80 transition-opacity">
           <div className="relative w-16 h-10">
             <Image
-              src="/logo-dark.png"
-              alt="Logo Light"
-              layout="fill"
-              className="hidden dark:block"
-            />
-            <Image
               src="/logo-light.png"
-              alt="Logo Dark"
+              alt="Ally Logo"
               layout="fill"
-              className="block dark:hidden"
+              className="block"
             />
           </div>
         </Link>
         
-        {/* <Link href="/about" className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300">
-          About
+        <Link href="/dashboard" className="flex items-center space-x-1 hover:text-green-400 transition-colors">
+          <BarChart2 size={18} />
+          <span>Dashboard</span>
         </Link>
-        <Link href="/services" className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300">
-          Services
-        </Link> */}
+        <Link href="/study" className="flex items-center space-x-1 hover:text-green-400 transition-colors">
+          <BookOpen size={18} />
+          <span>Study</span>
+        </Link>
+        <Link href="/workout" className="flex items-center space-x-1 hover:text-green-400 transition-colors">
+          <Dumbbell size={18} />
+          <span>Workout</span>
+        </Link>
+        <Link href="/journal" className="flex items-center space-x-1 hover:text-green-400 transition-colors">
+          <PenTool size={18} />
+          <span>Journal</span>
+        </Link>
       </div>
       
       <div className="flex items-center space-x-4">
-        {/* {isRunning ? (<Timer/>) : (<TimerOff/>) } */}
+        <div className="text-green-400">
+          {isRunning ? <Timer size={24} /> : <TimerOff size={24} />}
+        </div>
         <ModeToggle />
-        <UserButton/>
+        <UserButton />
       </div>
     </nav>
+    <div className="h-7"></div>
+    </div>
   );
 };
 
