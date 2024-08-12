@@ -221,20 +221,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     setShowAlert(false);
   };
 
-  const quotes = [
-    "The future depends on what you do today",
-    "The only way to achieve the impossible is to believe it is possible",
-    "Push yourself, because no one else is going to do it for you",
-    "Success is not final, failure is not fatal",
-    "You don't have to be great to start, but you have to start to be great",
-    "Don't limit your challenges. Challenge your limits",
-    "Small daily improvements over time lead to stunning results"
-  ];
-
-  const getRandomQuote = () => {
-    const randomQuote = Math.floor(Math.random() * quotes.length);
-    setQuote(quotes[randomQuote]);
-  };
+  
 
   const fetchTodayStudyTime = async () => {
     try {
@@ -254,12 +241,11 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
 
   useEffect(() => {
     fetchTodayStudyTime();
-    getRandomQuote();
   }, [isRunning]);
 
   return (
     <div className="relative h-full flex flex-col items-center select-none">
-      <div className="absolute top-[10%] flex flex-col items-center w-full">
+      <div className="absolute top-[5%] flex flex-col items-center w-full">
         <div className="relative w-60 h-60 mb-8"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
@@ -273,8 +259,9 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
               cx="120"
               cy="120"
               r="118"
-              stroke="#2b292e"
-              strokeWidth="4"
+              stroke="#e3ffed"
+              opacity={0.3}
+              strokeWidth="5"
               fill="transparent"
               className="w-60 h-60"
             /> 
@@ -283,7 +270,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
               cy="120"
               r="118"
               stroke="#22c55e"
-              strokeWidth="4"
+              strokeWidth="5"
               fill="transparent"
               strokeDasharray={circumference}
               strokeDashoffset={offset}
@@ -296,13 +283,13 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
         </div>
     
     <div className="flex flex-col items-center w-full max-w-[350px]">
-      <div className="mb-4 w-[50%]">
+      <div className="mb-4 w-[40%]">
         {isRunning ? (
           <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
             <AlertDialogTrigger asChild>
               <Button
                 onClick={handleStop}
-                className="bg-red-500 w-full"
+                className="bg-red-500 w-full text-white"
               >
                 Give up
               </Button>
@@ -323,19 +310,19 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
         ) : (
           <Button
             onClick={startTimer}
-            className="bg-green-500 w-full"
+            className="bg-green-500 w-full text-white"
           >
             Start
           </Button>
         )}
       </div>
       
-      <div className="mt-3 w-[50%]">
+      <div className="mt-3 w-[35%]">
         <Select 
           onValueChange={onChangeTimer}
           disabled = {isRunning}
         >
-          <SelectTrigger className="w-full">
+          <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
             <SelectValue placeholder="Timer" />
           </SelectTrigger>
           <SelectContent>
@@ -346,13 +333,13 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
         </Select>
       </div>
       
-      <div className="mt-3 w-[50%]">
+      <div className="mt-3 w-[35%]">
           <Select 
             value={activity} 
             onValueChange={(value) => setActivity(value)}
             disabled = {isRunning}
           >
-          <SelectTrigger className="w-full">
+          <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
             <SelectValue placeholder="Stopwatch" />
           </SelectTrigger>
           <SelectContent>
@@ -368,9 +355,6 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
       </div>
     </div>
     
-    <div className="mt-16 text-zinc-900 dark:text-zinc-200 bottom-4 text-center">
-      {quote}
-    </div>
   </div>
 </div>
   );

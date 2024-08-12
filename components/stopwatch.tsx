@@ -33,26 +33,12 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showAlert, setShowAlert] = useState(false);
   const [activity, setActivity] = useState(initialActivity);
-  const [quote, setQuote] = useState("");
+
   const [studyTimeToday, setStudyTimeToday] = useState(0);
   const startTimeRef = useRef<number | null>(null);
   const intervalRef = useRef<number | null>(null);
   const router = useRouter();
 
-  const quotes = [
-    "The future depends on what you do today",
-    "The only way to achieve the impossible is to believe it is possible",
-    "Push yourself, because no one else is going to do it for you",
-    "Success is not final, failure is not fatal",
-    "You don't have to be great to start, but you have to start to be great",
-    "Don't limit your challenges. Challenge your limits",
-    "Small daily improvements over time lead to stunning results"
-  ];
-
-  const getRandomQuote = () => {
-    const randomQuote = Math.floor(Math.random() * quotes.length);
-    setQuote(quotes[randomQuote]);
-  }
 
   const formatTime = (time: number) => {
     const hours = Math.floor(time / 3600000);
@@ -164,7 +150,6 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
 
   useEffect(() => {
     fetchTodayStudyTime();
-    getRandomQuote();
   }, [isRunning]);
 
   useEffect(() => {
@@ -174,7 +159,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
   return (
     <div className="relative h-full flex flex-col items-center select-none">
       <div className="absolute top-[10%] flex flex-col items-center w-full">
-        <div className="flex flex-col items-center justify-center w-60 h-60 border-4 border-green-500 rounded-full mb-8">
+        <div className="flex flex-col items-center justify-center w-60 h-60 border-[5px] border-green-500 rounded-full mb-8">
           <div className="text-4xl">{formatTime(elapsedTime)}</div>
         </div>
         
@@ -255,9 +240,6 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
           )}
         </div>
         
-        <div className="mt-16 text-zinc-900 dark:text-zinc-200 bottom-4 text-center">
-          {quote}
-        </div>
       </div>
     </div>
   );
