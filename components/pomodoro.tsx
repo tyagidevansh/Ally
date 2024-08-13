@@ -22,12 +22,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 
 import { useNotifications } from "@/hooks/use-notification";
 import { RefreshCcw, SkipForward, Square } from "lucide-react";
@@ -159,7 +153,6 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
 
     startTimeRef.current = null;
     setTimeLeft(selectedTimeRef.current);
-    //setTotalTime(1500);
     router.refresh();
   }, [setIsRunning, activity, router, isBreak, setIsBreak, totalTime]);
   
@@ -392,11 +385,10 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
     </Select>
   </div>
 </div>
-
     
-      <div className="text-zinc-900 dark:text-zinc-300 mt-4 text-center">
-        Focused {formatTimeForDaily(studyTimeToday)} today
-      </div>
+  <div className="text-zinc-100 mt-6 text-center">
+    Focused {formatTimeForDaily(studyTimeToday)} today
+  </div>
   </div>
 </div>
   );

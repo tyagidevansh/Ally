@@ -289,7 +289,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
             <AlertDialogTrigger asChild>
               <Button
                 onClick={handleStop}
-                className="bg-red-500 w-full text-white"
+                className="bg-red-600 w-full text-white hover:bg-red-500"
               >
                 Give up
               </Button>
@@ -310,7 +310,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
         ) : (
           <Button
             onClick={startTimer}
-            className="bg-green-500 w-full text-white"
+            className="bg-green-500 w-full text-white hover:bg-green-600"
           >
             Start
           </Button>
@@ -325,7 +325,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
           <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
             <SelectValue placeholder="Timer" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white/20 backdrop-blur-md">
             <SelectItem value="Stopwatch">Stopwatch</SelectItem>
             <SelectItem value="Timer">Timer</SelectItem>
             <SelectItem value="Pomodoro">Pomodoro</SelectItem>
@@ -342,7 +342,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
           <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
             <SelectValue placeholder="Stopwatch" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white/20 backdrop-blur-md">
             <SelectItem value="Study">Study</SelectItem>
             <SelectItem value="Workout">Workout</SelectItem>
             <SelectItem value="Other">Other</SelectItem>
@@ -350,7 +350,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
         </Select>
       </div>
       
-      <div className="text-zinc-900 dark:text-zinc-300 mt-4 text-center">
+      <div className="text-zinc-100 mt-6 text-center">
         Focused {formatTimeForDaily(studyTimeToday)} today
       </div>
     </div>

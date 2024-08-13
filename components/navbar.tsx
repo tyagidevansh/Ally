@@ -46,9 +46,9 @@ const Navbar = () => {
           <BarChart2 size={18} />
           <span>Dashboard</span>
         </Link>
-        <Link href="/study" className="flex items-center space-x-1 hover:text-green-400 transition-colors">
+        <Link href="/focus" className="flex items-center space-x-1 hover:text-green-400 transition-colors">
           <BookOpen size={18} />
-          <span>Study</span>
+          <span>Focus</span>
         </Link>
         <Link href="/workout" className="flex items-center space-x-1 hover:text-green-400 transition-colors">
           <Dumbbell size={18} />

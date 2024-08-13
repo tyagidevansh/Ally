@@ -158,19 +158,19 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
 
   return (
     <div className="relative h-full flex flex-col items-center select-none">
-      <div className="absolute top-[10%] flex flex-col items-center w-full">
+      <div className="absolute top-[5%] flex flex-col items-center w-full">
         <div className="flex flex-col items-center justify-center w-60 h-60 border-[5px] border-green-500 rounded-full mb-8">
           <div className="text-4xl">{formatTime(elapsedTime)}</div>
         </div>
         
         <div className="flex flex-col items-center w-full max-w-[350px]">
-          <div className="mb-4 w-[50%]">
+          <div className="mb-4 w-[40%]">
             {isRunning ? (
               <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
                 <AlertDialogTrigger asChild>
                   <Button
                     onClick={handleStop}
-                    className="bg-red-500 w-full"
+                    className="bg-red-600 w-full text-white hover:bg-red-500"
                   >
                     Stop
                   </Button>
@@ -191,7 +191,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
             ) : (
               <Button
                 onClick={startTimer}
-                className="bg-green-500 w-full"
+                className="bg-green-500 w-full text-white hover:bg-green-600"
               >
                 Start
               </Button>
@@ -200,12 +200,12 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
           
           {!autoStart && (
             <>
-              <div className="mt-3 w-[50%]">
+              <div className="mt-3 w-[35%]">
               <Select 
                 onValueChange={onChangeTimer}
                 disabled = {isRunning}
               >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
                     <SelectValue placeholder="Stopwatch" />
                   </SelectTrigger>
                   <SelectContent>
@@ -216,13 +216,13 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                 </Select>
               </div>
               
-              <div className="mt-3 w-[50%]">
+              <div className="mt-3 w-[35%]">
                 <Select 
                   value={activity} 
                   onValueChange={(value) => setActivity(value)}
                   disabled = {isRunning}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
                     <SelectValue placeholder="Stopwatch" />
                   </SelectTrigger>
                   <SelectContent>
@@ -233,7 +233,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                 </Select>
               </div>
               
-              <div className="text-zinc-900 dark:text-zinc-300 mt-4 text-center">
+              <div className="text-zinc-100 mt-6 text-center">
                 Focused {formatTimeForDaily(studyTimeToday)} today
               </div>
             </>
