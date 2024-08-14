@@ -23,7 +23,7 @@ const Home = () => {
       <Navbar/>
       <div className="container mx-auto px-4 py-12">
         <div className="text-center mb-16">
-          <h1 className="text-6xl font-bold mb-6">
+          <h1 className="text-6xl mt-6 font-bold mb-6">
             Achieve a little more everyday <br/>
             with your own <span className="text-green-400">Ally</span>
           </h1>

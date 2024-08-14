@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Button } from './ui/button';
+import { Pause, Play } from 'lucide-react';
 
 interface MusicPlayerProps {
   videoId: string;
+  title: string;
 }
 
 declare global {
@@ -29,7 +31,7 @@ const loadYouTubeAPI = (): Promise<void> => {
   });
 };
 
-const MusicPlayer: React.FC<MusicPlayerProps> = ({ videoId }) => {
+const MusicPlayer = ({ videoId, title }: MusicPlayerProps) => {
   const playerRef = useRef<any>(null);
   const [isReady, setIsReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -40,7 +42,7 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ videoId }) => {
     const initializePlayer = async () => {
       await loadYouTubeAPI();
       
-      if (isMounted) {
+      if (isMounted && !playerRef.current) {
         playerRef.current = new window.YT.Player('ytplayer', {
           height: '0',
           width: '0',
@@ -51,8 +53,13 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ videoId }) => {
             playlist: videoId
           },
           events: {
-            'onReady': onPlayerReady,
-            'onError': onPlayerError,
+            'onReady': () => {
+              setIsReady(true);
+              console.log("Player is ready");
+            },
+            'onError': (event: any) => {
+              console.error("YouTube player error:", event.data);
+            },
           }
         });
       }
@@ -62,23 +69,26 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ videoId }) => {
 
     return () => {
       isMounted = false;
-      if (playerRef.current) {
-        playerRef.current.destroy();
-      }
     };
-  }, [videoId]);
+  }, []);
 
-  const onPlayerReady = (event: any) => {
-    setIsReady(true);
-    console.log("Player is ready");
-  }
-
-  const onPlayerError = (event: any) => {
-    console.error("YouTube player error:", event.data);
-  }
+  useEffect(() => {
+    if (isReady && playerRef.current) {
+      playerRef.current.loadVideoById({
+        videoId: videoId,
+        startSeconds: 0,
+        suggestedQuality: 'default'
+      });
+      if (isPlaying) {
+        playerRef.current.playVideo();
+      } else {
+        playerRef.current.pauseVideo();
+      }
+    }
+  }, [videoId, isReady, isPlaying]);
 
   const togglePlay = () => {
-    if (playerRef.current) {
+    if (playerRef.current && isReady) {
       if (isPlaying) {
         playerRef.current.pauseVideo();
       } else {
@@ -91,9 +101,16 @@ const MusicPlayer: React.FC<MusicPlayerProps> = ({ videoId }) => {
   return (
     <div>
       <div id="ytplayer"></div>
-      <Button onClick={togglePlay} disabled={!isReady} className='bg-red-200'>
-        {isPlaying ? 'Pause' : 'Play'}
-      </Button>
+      <div className='flex flex-col items-center bg-white/10 backdrop-blur-md text-white p-4 rounded-lg shadow-md'>
+        <h2 className='text-lg font-semibold mb-2'>{title}</h2>
+        <Button 
+          onClick={togglePlay} 
+          disabled={!isReady} 
+          className='flex items-center justify-center text-white bg-white/10 backdrop-blur-md hover:bg-white/30'
+        >
+          {isPlaying ? <Pause/> : <Play/>}
+        </Button>
+      </div>
     </div>
   )
 }

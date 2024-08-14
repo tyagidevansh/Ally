@@ -10,6 +10,7 @@ import Slider from "react-slick";
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 type Environment = {
   image: string;
@@ -96,18 +97,24 @@ const Home = () => {
       <div className="relative z-20 flex flex-col h-full">
         <Navbar />
         
-        <div className="flex-1 grid grid-cols-10 grid-rows-10 mt-5">
-          <div className="col-span-3 row-span-9 order-1 ml-10 mt-24 bg-white/10 rounded-xl backdrop-blur-md">
+        <div className="flex-1 grid grid-cols-10 gap-6 p-4">
+          <div className="col-span-3 row-auto ml-10 mt-16 bg-white/10 rounded-xl backdrop-blur-md">
             {renderComponent()}
           </div>
-          <div className="col-span-2 row-span-1 order-2 mt-36 bg-white/10 rounded-xl p-4">
-           <MusicPlayer videoId={currentEnv.music}/>
-           <Button onClick={() => sliderRef.current.slickNext()}>
-            next
-           </Button>
+          <div className="col-span-2 order-2 ml-10 mt-10 p-4">
+            <MusicPlayer videoId={currentEnv.music} title = {currentEnv.name}/>
+            <div className="flex flex-row justify-end m-2 ">
+              <Button onClick={() => sliderRef.current.slickPrev()} className="bg-white/10 backdrop-blur-md text-white hover:bg-white/30">
+                <ChevronLeft/>
+              </Button>
+              <Button onClick={() => sliderRef.current.slickNext()} className="ml-2 bg-white/10 backdrop-blur-md text-white hover:bg-white/30">
+                <ChevronRight/>
+              </Button>
+            </div>
+
           </div>
-          <div className="col-span-4 row-span-1 order-3 mt-36 ml-4 bg-white/10 rounded-xl p-4">
-            <p className="text-white text-center">{quote}</p>
+          <div className="col-span-5 mt-auto ml-36 p-4">
+            <p className="text-white text-center text-xl">"{quote}"</p>
           </div>
         </div>
       </div>

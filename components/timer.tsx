@@ -245,7 +245,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
 
   return (
     <div className="relative h-full flex flex-col items-center select-none">
-      <div className="absolute top-[5%] flex flex-col items-center w-full">
+      <div className="absolute top-[10%] flex flex-col items-center w-full">
         <div className="relative w-60 h-60 mb-8"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
@@ -294,7 +294,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
                 Give up
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="bg-zinc-200 dark:bg-zinc-800 text-black dark:text-white">
+            <AlertDialogContent className="bg-zinc-200 dark:bg-zinc-800 text-white">
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure you want to stop the timer?</AlertDialogTitle>
                 <AlertDialogDescription>
@@ -350,7 +350,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
         </Select>
       </div>
       
-      <div className="text-zinc-100 mt-6 text-center">
+      <div className="text-zinc-100 mt-12 text-center text-lg">
         Focused {formatTimeForDaily(studyTimeToday)} today
       </div>
     </div>

@@ -158,7 +158,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
 
   return (
     <div className="relative h-full flex flex-col items-center select-none">
-      <div className="absolute top-[5%] flex flex-col items-center w-full">
+      <div className="absolute top-[10%] flex flex-col items-center w-full">
         <div className="flex flex-col items-center justify-center w-60 h-60 border-[5px] border-green-500 rounded-full mb-8">
           <div className="text-4xl">{formatTime(elapsedTime)}</div>
         </div>
@@ -208,7 +208,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                   <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
                     <SelectValue placeholder="Stopwatch" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white/20 backdrop-blur-md">
                     <SelectItem value="Stopwatch">Stopwatch</SelectItem>
                     <SelectItem value="Timer">Timer</SelectItem>
                     <SelectItem value="Pomodoro">Pomodoro</SelectItem>
@@ -225,7 +225,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                   <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
                     <SelectValue placeholder="Stopwatch" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white/20 backdrop-blur-md">
                     <SelectItem value="Study">Study</SelectItem>
                     <SelectItem value="Workout">Workout</SelectItem>
                     <SelectItem value="Other">Other</SelectItem>
@@ -233,7 +233,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                 </Select>
               </div>
               
-              <div className="text-zinc-100 mt-6 text-center">
+              <div className="text-zinc-100 mt-12 text-center text-lg">
                 Focused {formatTimeForDaily(studyTimeToday)} today
               </div>
             </>

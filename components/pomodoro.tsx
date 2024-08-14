@@ -242,7 +242,7 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
 
   return (
     <div className="relative h-full flex flex-col items-center select-none">
-      <div className="absolute top-[5%] flex flex-col items-center w-full">
+      <div className="absolute top-[10%] flex flex-col items-center w-full">
         <div className="relative w-60 h-60 mb-8">
           <svg 
             className="w-full h-full transform -rotate-90 cursor-pointer" 
@@ -322,7 +322,7 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
                     <Square size={32} />
                   </motion.button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="bg-zinc-200 dark:bg-zinc-800 text-black dark:text-white">
+                <AlertDialogContent className="bg-white/30 backdrop:blur-md">
                   <AlertDialogHeader>
                     <AlertDialogTitle>Are you sure you want to end this session?</AlertDialogTitle>
                     <AlertDialogDescription>
@@ -358,7 +358,7 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
       <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
         <SelectValue placeholder="Pomodoro" />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="bg-white/20 backdrop-blur-md">
         <SelectItem value="Stopwatch">Stopwatch</SelectItem>
         <SelectItem value="Timer">Timer</SelectItem>
         <SelectItem value="Pomodoro">Pomodoro</SelectItem>
@@ -377,7 +377,7 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
       <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
         <SelectValue placeholder="Stopwatch" />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="bg-white/20 backdrop-blur-md">
         <SelectItem value="Study">Study</SelectItem>
         <SelectItem value="Workout">Workout</SelectItem>
         <SelectItem value="Other">Other</SelectItem>
@@ -386,7 +386,7 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
   </div>
 </div>
     
-  <div className="text-zinc-100 mt-6 text-center">
+  <div className="text-zinc-100 mt-12 text-center text-lg">
     Focused {formatTimeForDaily(studyTimeToday)} today
   </div>
   </div>
