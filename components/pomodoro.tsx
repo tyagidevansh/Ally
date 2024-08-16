@@ -31,10 +31,10 @@ interface TimerProps {
 }
 
 const Pomodoro = ({ onChangeTimer }: TimerProps) => {
-  const [totalTime, setTotalTime] = useState(1500);
+  const [totalTime, setTotalTime] = useState(10);
   const [isBreak, setIsBreak] = useState(false);
   const [intervalsRemaining, setIntervalsRemaining] = useState(8);
-  const [timeLeft, setTimeLeft] = useState(1500);
+  const [timeLeft, setTimeLeft] = useState(10);
   const { isRunning, setIsRunning } = useTimerStore() as { isRunning: boolean, setIsRunning: (value: boolean) => void };
   const [activity, setActivity] = useState("Study");
   const [showAlert, setShowAlert] = useState(false);
@@ -42,7 +42,7 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
-  const selectedTimeRef = useRef<number>(1500);
+  const selectedTimeRef = useRef<number>(10);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   
   const router = useRouter();
@@ -88,19 +88,19 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
       
       if (newTimeLeft === 0) {
         handleIntervalChange();
-        if (totalTime === 1500) {
-          if (!document.hidden) {
-            sendNotification("Time for a break!", {body: "Rest up and be back in 5!", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
-          } else {
-            sendNotification("25 minutes are up!", {body: "Keep going or return to the site to start the break.", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
-          }
-        } else {
-          if (!document.hidden) {
-            sendNotification("Break's over!", {body: "Time to lock in", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
-          } else {
-            sendNotification("5 minutes are up!", {body: "Return to the website when you're ready to start focusing.", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
-          }
-        }
+        // if (totalTime === 10) {
+        //   if (!document.hidden) {
+        //     sendNotification("Time for a break!", {body: "Rest up and be back in 5!", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
+        //   } else {
+        //     sendNotification("25 minutes are up!", {body: "Keep going or return to the site to start the break.", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
+        //   }
+        // } else {
+        //   if (!document.hidden) {
+        //     sendNotification("Break's over!", {body: "Time to lock in", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
+        //   } else {
+        //     sendNotification("5 minutes are up!", {body: "Return to the website when you're ready to start focusing.", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
+        //   }
+        // }
       } else {
         timerRef.current = requestAnimationFrame(updateTimer);
       }
@@ -170,7 +170,7 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
       } else {
         newIsBreak = !prevIsBreak;
         console.log("New isBreak value:", newIsBreak);
-        newTime = newIsBreak ? 300 : 1500;
+        newTime = newIsBreak ? 300 : 10;
       }
       console.log(intervalsRemaining);
       startTimer(newTime);
@@ -184,11 +184,12 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
   }
 
   const handleSkip = () => {
+    startTimeRef.current = Date.now();
     //stopTimer();
-    if (totalTime == 1500) {
+    if (totalTime == 10) {
       startTimer(300);
     } else {
-      startTimer(1500);
+      startTimer(10);
     }
   }
 
@@ -214,8 +215,8 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
   const confirmStop = () => {
     stopTimer();
     setShowAlert(false);
-    setTimeLeft(1500);
-    setTotalTime(1500);
+    setTimeLeft(10);
+    setTotalTime(10);
     document.title = "Ally";
     router.refresh();
   };
@@ -272,7 +273,7 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <div className="text-4xl font-bold mt-2">{formatTime(timeLeft)}</div>
-            <div className="text-2xl font-bold mt-2">{totalTime === 1500 ? "Focus" : "Break"}</div>
+            <div className="text-2xl font-bold mt-2">{totalTime === 10 ? "Focus" : "Break"}</div>
           </div>
         </div>
     
@@ -288,7 +289,7 @@ const Pomodoro = ({ onChangeTimer }: TimerProps) => {
               transition={{ duration: 0.3 }}
             >
               <Button
-                onClick={() => startTimer(1500)}
+                onClick={() => startTimer(10)}
                 className="bg-green-500 w-full py-2 text-white text-bold hover:bg-green-600"
               >
                 Start

@@ -11,6 +11,7 @@ import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import PomodoroComponent from "@/components/pomodoro-2";
 
 type Environment = {
   image: string;
@@ -19,12 +20,18 @@ type Environment = {
 };
 
 const environments: Environment[] = [
-  {image: "https://media.giphy.com/media/Basrh159dGwKY/giphy.gif", music: "S_MOd40zlYU", name: "Dark ambience"},
   {image: "https://media.giphy.com/media/3diu2dFNpV8AnozJ3V/giphy.gif", music: "rUxyKA_-grg", name: "Dusk"},
+  {image: "https://media.giphy.com/media/Basrh159dGwKY/giphy.gif", music: "S_MOd40zlYU", name: "Dark ambience"},
+  {image: "https://media.giphy.com/media/xWMPYx55WNhX136T0V/giphy.gif", music: "S_MOd40zlYU", name: "Sunrise"},
+  {image: "https://media.giphy.com/media/6GazCZqvW67VPN5SEd/giphy.gif", music: "S_MOd40zlYU", name: "Dawn"},
+  {image: "https://media.giphy.com/media/pVGsAWjzvXcZW4ZBTE/giphy.gif", music: "S_MOd40zlYU", name: "number 5"},
+  {image: "https://media.giphy.com/media/5e25aUTZPcI94uMZgv/giphy.gif", music: "S_MOd40zlYU", name: "Sunrise"},
+  {image: "https://media.giphy.com/media/5ngV4MB0UnYc2loCHT/giphy.gif", music: "S_MOd40zlYU", name: "Sunrise"},
+
 ];
 
 const Home = () => {
-  const [selectedComponent, setSelectedComponent] = useState("Stopwatch");
+  const [selectedComponent, setSelectedComponent] = useState("Pomodoro2");
   const [quote, setQuote] = useState("");
   const [currentEnv, setCurrentEnv] = useState<Environment>(environments[0]);
   const sliderRef = useRef<any>(null);
@@ -67,6 +74,8 @@ const Home = () => {
         return <Timer onChangeTimer={setSelectedComponent}/>;
       case "Pomodoro":
         return <Pomodoro onChangeTimer={setSelectedComponent}/>;
+      case "Pomodoro2":
+        return <PomodoroComponent/>
       default:
         return <Stopwatch onChangeTimer={setSelectedComponent}/>;
     }
