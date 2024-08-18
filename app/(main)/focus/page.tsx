@@ -11,7 +11,6 @@ import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import PomodoroComponent from "@/components/pomodoro-2";
 
 type Environment = {
   image: string;
@@ -31,7 +30,7 @@ const environments: Environment[] = [
 ];
 
 const Home = () => {
-  const [selectedComponent, setSelectedComponent] = useState("Pomodoro2");
+  const [selectedComponent, setSelectedComponent] = useState("Pomodoro");
   const [quote, setQuote] = useState("");
   const [currentEnv, setCurrentEnv] = useState<Environment>(environments[0]);
   const sliderRef = useRef<any>(null);
@@ -74,8 +73,6 @@ const Home = () => {
         return <Timer onChangeTimer={setSelectedComponent}/>;
       case "Pomodoro":
         return <Pomodoro onChangeTimer={setSelectedComponent}/>;
-      case "Pomodoro2":
-        return <PomodoroComponent/>
       default:
         return <Stopwatch onChangeTimer={setSelectedComponent}/>;
     }
