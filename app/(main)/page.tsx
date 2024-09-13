@@ -12,7 +12,7 @@ const Home = () => {
 
   const handleClick = () => {
     if (isSignedIn) {
-      router.push('/home');
+      router.push('/dashboard');
     } else {
       router.push('/sign-in');
     }

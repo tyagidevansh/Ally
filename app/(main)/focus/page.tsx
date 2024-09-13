@@ -30,7 +30,7 @@ const environments: Environment[] = [
 ];
 
 const Home = () => {
-  const [selectedComponent, setSelectedComponent] = useState("Pomodoro");
+  const [selectedComponent, setSelectedComponent] = useState("Timer");
   const [quote, setQuote] = useState("");
   const [currentEnv, setCurrentEnv] = useState<Environment>(environments[0]);
   const sliderRef = useRef<any>(null);

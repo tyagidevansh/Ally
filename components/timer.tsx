@@ -221,8 +221,6 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     setShowAlert(false);
   };
 
-  
-
   const fetchTodayStudyTime = async () => {
     try {
       const response = await fetch('/api/timer-log', {
