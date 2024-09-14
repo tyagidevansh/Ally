@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/navbar";
 import { ArrowRight, BookOpen, Dumbbell, PenTool, TrendingUp } from "lucide-react";
 
+//todo : add an option to add custom activities, remove workout and give the option to add activity names
+
 const Home = () => {
   const { isSignedIn } = useAuth();
   const router = useRouter();

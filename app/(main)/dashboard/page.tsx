@@ -1,63 +1,45 @@
 'use client'
 
 import Navbar from "@/components/navbar";
-import { Bar, BarChart } from "recharts"
- 
-import { ChartConfig, ChartContainer } from "@/components/ui/chart"
-import { Button } from "@/components/ui/button";
-import axios from "axios";
+import { useEffect, useState } from "react";
+import { ReactNode } from "react";
+import Graph from "@/components/graph";
 
-const chartData = [
-  { month: "January", desktop: 186, mobile: 80 },
-  { month: "February", desktop: 305, mobile: 200 },
-  { month: "March", desktop: 237, mobile: 120 },
-  { month: "April", desktop: 73, mobile: 190 },
-  { month: "May", desktop: 209, mobile: 130 },
-  { month: "June", desktop: 214, mobile: 140 },
-]
- 
-const chartConfig = {
-  desktop: {
-    label: "Desktop",
-    color: "#2563eb",
-  },
-  mobile: {
-    label: "Mobile",
-    color: "#60a5fa",
-  },
-} satisfies ChartConfig
-
-const handleClick = async () => {
-  try {
-    const response = await axios.get("/api/graphs", {
-      params: {
-        startTime: new Date("Septemeber 12, 2024 00:00:00").toISOString(),
-        endTime: new Date("Septemeber 14, 2024 11:59:59").toISOString(),
-      }    
-    });
-    console.log(response.data);
-  } catch (error) {
-    console.log("graph api handle click error", error);
-  }
-}
+const DashboardBox = ({ children, className = ""}: { children: ReactNode, className?: string }) => (
+  <div className={`border border-gray-700 rounded-lg p-4 transition-all duration-300 hover:bg-gray-900 hover:border-green-500 ${className}`}>
+    {children}
+  </div>
+);
 
 const dashboard = () => {
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white">
       <Navbar/>  
-      <div className="h-[300px] w-[200px]">
-      <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-        <BarChart accessibilityLayer data={chartData}>
-          <Bar dataKey="desktop" fill="var(--color-desktop)" radius={4} />
-          <Bar dataKey="mobile" fill="var(--color-mobile)" radius={4} />
-        </BarChart>
-      </ChartContainer>
+      <div className="container mx-auto p-4 grid grid-cols-4 gap-4 mt-10"> 
+      
+        <DashboardBox className="col-span-3 row-span-2">
+          <Graph/>
+        </DashboardBox>
+
+        <DashboardBox className="col-span-1 row-span-4">
+          sidebar
+        </DashboardBox>
+
+        <DashboardBox className="col-span-1 row-span-1">
+          bottom element 1
+        </DashboardBox>
+
+        <DashboardBox className="col-span-1 row-span-1">
+          bottom element 2
+        </DashboardBox>
+
+        <DashboardBox className="col-span-1 row-span-1">
+          bottom element 3
+        </DashboardBox>
+
       </div>  
       
-      <div>
-        <Button onClick={handleClick}>send request</Button>
-      </div>
-
     </div>
   )
 }

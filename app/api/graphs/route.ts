@@ -28,6 +28,8 @@ export async function GET(req: Request) {
     const dates = [];
     const durations = [];
 
+    //to do: seperate chartLogs by activity
+
     for (let dt = new Date(startTime); dt <= endTime; dt.setDate(dt.getDate() + 1)) {
       dates.push(dt.toDateString().slice(4, 10));
 
@@ -49,10 +51,15 @@ export async function GET(req: Request) {
       durations.push(logs.reduce((sum, log) => sum + log.duration, 0));      
     }
 
-    console.log("dates: ", dates);
-    console.log("durations: ", durations)
+    const chartData = [];
+    for (let i = 0; i < dates.length; i++) {
+      chartData.push({
+        date: dates[i],
+        time: durations[i],
+      })
+    }
 
-    return NextResponse.json({success: "message receieved", startTime, endTime});
+    return NextResponse.json({success: "message receieved", chartData});
   } catch (error) {
     console.log("[GRAPHS ERROR] ", error);
     return new NextResponse("Internal Error", {status: 500});
