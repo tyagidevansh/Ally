@@ -5,14 +5,14 @@ import { NextResponse } from "next/server";
 export async function GET(req: Request) {
   try {
     const profile = await currentProfile();
-    
+
     if (!profile) {
-      return new NextResponse("Unauthorized", { status : 401});
+      return new NextResponse("Unauthorized", { status: 401 });
     }
 
     const url = new URL(req.url);
-    const startTimeString = url.searchParams.get('startTime');
-    const endTimeString = url.searchParams.get('endTime');
+    const startTimeString = url.searchParams.get("startTime");
+    const endTimeString = url.searchParams.get("endTime");
 
     if (!startTimeString || !endTimeString) {
       return new NextResponse("Invalid date range", { status: 400 });
@@ -25,43 +25,40 @@ export async function GET(req: Request) {
       return new NextResponse("Invalid date format", { status: 400 });
     }
 
-    const dates = [];
-    const durations = [];
+    const logs = await db.timerLog.findMany({
+      where: {
+        profileId: profile.id,
+        startTime: {
+          gte: startTime,
+          lt: new Date(endTime.setDate(endTime.getDate())),
+        },
+      },
+    });
 
-    //to do: seperate chartLogs by activity
+    //todo : seperate tasks by activity
 
-    for (let dt = new Date(startTime); dt <= endTime; dt.setDate(dt.getDate() + 1)) {
-      dates.push(dt.toDateString().slice(4, 10));
+    const dateMap: { [key: string]: number } = {};
 
-      const currentDay = new Date(dt);
-      const nextDay = new Date(dt);
-
-      nextDay.setDate(dt.getDate() + 1);
-
-      const logs = await db.timerLog.findMany({
-        where: {
-          profileId: profile.id,
-          startTime: {
-            gte: currentDay,
-            lt: nextDay,
-          },
-        }
-      });
-      
-      durations.push(logs.reduce((sum, log) => sum + log.duration, 0));      
-    }
+    logs.forEach((log) => {
+      const date = log.startTime.toDateString().slice(4, 10); // MMM DD
+      if (!dateMap[date]) {
+        dateMap[date] = 0;
+      }
+      dateMap[date] += log.duration;
+    });
 
     const chartData = [];
-    for (let i = 0; i < dates.length; i++) {
+    for (let dt = new Date(startTime); dt <= endTime; dt.setDate(dt.getDate() + 1)) {
+      const date = dt.toDateString().slice(4, 10);
       chartData.push({
-        date: dates[i],
-        time: durations[i],
-      })
+        date,
+        time: dateMap[date] || 0,
+      });
     }
 
-    return NextResponse.json({success: "message receieved", chartData});
+    return NextResponse.json({ success: "message received", chartData });
   } catch (error) {
     console.log("[GRAPHS ERROR] ", error);
-    return new NextResponse("Internal Error", {status: 500});
+    return new NextResponse("Internal Error", { status: 500 });
   }
 }
