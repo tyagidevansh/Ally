@@ -21,19 +21,26 @@ const dashboard = () => {
         
         <DashboardBox className="row-span-2" style={{ minHeight: '75vh' }}>
           <Graph />
+        </DashboardBox> 
+
+        <DashboardBox className="row-span-1">
+          Stats maybe? <br />
+          Day total (up/down) <br />
+          Week total <br />
+          Month total so far <br />
+          Streak of hitting daily goal <br />
         </DashboardBox>
 
-        <DashboardBox className="row-span-3">
-          Sidebar
+        <DashboardBox className="row-span-2">
+          To do list
         </DashboardBox>
 
-        {/* Nested grid inside the first column for bottom 3 elements */}
         <div className="grid grid-cols-3 gap-4 row-span-1">
           <DashboardBox>
-            Bottom element 1
+            Recent sessions?
           </DashboardBox>
           <DashboardBox>
-            Bottom element 2
+            Calendar?
           </DashboardBox>
           <DashboardBox>
             Bottom element 3

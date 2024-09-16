@@ -13,6 +13,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const startTimeString = url.searchParams.get("startTime");
     const endTimeString = url.searchParams.get("endTime");
+    const byMonth = url.searchParams.get("byMonth") === "true";
 
     if (!startTimeString || !endTimeString) {
       return new NextResponse("Invalid date range", { status: 400 });
@@ -29,7 +30,7 @@ export async function GET(req: Request) {
       where: {
         profileId: profile.id,
         startTime: {
-          gte: startTime,
+          gte: startTime, 
           lt: new Date(endTime.setDate(endTime.getDate())),
         },
       },
@@ -37,26 +38,52 @@ export async function GET(req: Request) {
 
     //todo : seperate tasks by activity
 
-    const dateMap: { [key: string]: number } = {};
+    if (byMonth) {
+      const monthMap: { [key: string]: number } = {};
 
-    logs.forEach((log) => {
-      const date = log.startTime.toDateString().slice(4, 10); // MMM DD
-      if (!dateMap[date]) {
-        dateMap[date] = 0;
-      }
-      dateMap[date] += log.duration;
-    });
-
-    const chartData = [];
-    for (let dt = new Date(startTime); dt <= endTime; dt.setDate(dt.getDate() + 1)) {
-      const date = dt.toDateString().slice(4, 10);
-      chartData.push({
-        date,
-        time: dateMap[date] || 0,
+      logs.forEach((log) => {
+        const month = log.startTime.toLocaleString('default', {month: "short", year: "numeric"});
+        if (!monthMap[month]) {
+          monthMap[month] = 0;
+        }
+        monthMap[month] += log.duration;
       });
+
+      const chartData = [];
+      for (let dt = new Date(startTime); dt <= endTime; dt.setMonth(dt.getMonth() + 1)) {
+        const month = dt.toLocaleString('default', { month: "short", year: "numeric"});
+        chartData.push({
+          date: month.slice(0, 3),
+          time: monthMap[month] || 0,
+        });
+      }
+
+      return NextResponse.json({ success: "message recieved", chartData });
+
+    } else {
+      const dateMap: { [key: string]: number } = {};
+
+      logs.forEach((log) => {
+        const date = log.startTime.toDateString().slice(4, 10); // MMM DD
+        if (!dateMap[date]) {
+          dateMap[date] = 0;
+        }
+        dateMap[date] += log.duration;
+      });
+
+      const chartData = [];
+      for (let dt = new Date(startTime); dt <= endTime; dt.setDate(dt.getDate() + 1)) {
+        const date = dt.toDateString().slice(4, 10);
+        chartData.push({
+          date,
+          time: dateMap[date] || 0,
+        });
+      }
+
+      return NextResponse.json({ success: "message received", chartData });
     }
 
-    return NextResponse.json({ success: "message received", chartData });
+    
   } catch (error) {
     console.log("[GRAPHS ERROR] ", error);
     return new NextResponse("Internal Error", { status: 500 });

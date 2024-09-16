@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback} from "react";
 import { Button } from "./ui/button";
 import axios from "axios";
 import { useRouter } from "next/navigation";
@@ -22,6 +22,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useNotifications } from "@/hooks/use-notification";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface TimerProps {
   onChangeTimer: (value: string) => void;
@@ -41,6 +42,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   const startTimeRef = useRef<number | null>(null);
   const selectedTimeRef = useRef<number>(10800);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [showRunningAlert, setShowRunningAlert] = useState<boolean>(false);
   
   const router = useRouter();
   const { sendNotification } = useNotifications();
@@ -241,18 +243,31 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     fetchTodayStudyTime();
   }, [isRunning]);
 
+  useEffect(() => {
+    if (isRunning) {
+      setShowRunningAlert(true);
+    } 
+  }, [])
+
   return (
+  showRunningAlert ? (
+    <div>
+      <Alert variant="destructive">
+        <AlertDescription>
+          A timer is already running. Please stop the running timer to start a new one!
+        </AlertDescription>
+      </Alert>
+    </div> 
+  ) : (
     <div className="relative h-full flex flex-col items-center select-none">
       <div className="absolute top-[10%] flex flex-col items-center w-full">
-        <div className="relative w-60 h-60 mb-8"
+        <div
+          className="relative w-60 h-60 mb-8"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
         >
-          <svg 
-            className="w-full h-full transform -rotate-90 cursor-pointer" 
-            ref={svgRef}
-          >
+          <svg className="w-full h-full transform -rotate-90 cursor-pointer" ref={svgRef}>
             <circle
               cx="120"
               cy="120"
@@ -262,8 +277,8 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
               strokeWidth="5"
               fill="transparent"
               className="w-60 h-60"
-            /> 
-            <circle 
+            />
+            <circle
               cx="120"
               cy="120"
               r="118"
@@ -279,83 +294,85 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
             <span className="text-4xl font-bold">{formatTime(timeLeft)}</span>
           </div>
         </div>
-    
-    <div className="flex flex-col items-center w-full max-w-[350px]">
-      <div className="mb-4 w-[40%]">
-        {isRunning ? (
-          <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
-            <AlertDialogTrigger asChild>
+
+        <div className="flex flex-col items-center w-full max-w-[350px]">
+          <div className="mb-4 w-[40%]">
+            {isRunning ? (
+              <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    onClick={handleStop}
+                    className="bg-red-600 w-full text-white hover:bg-red-500"
+                  >
+                    Give up
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="bg-zinc-200 dark:bg-zinc-800 text-white">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure you want to stop the timer?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Keep pushing and reach your goal!
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setShowAlert(false)}>Keep going</AlertDialogCancel>
+                    <AlertDialogAction onClick={confirmStop}>Give up</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            ) : (
               <Button
-                onClick={handleStop}
-                className="bg-red-600 w-full text-white hover:bg-red-500"
+                onClick={startTimer}
+                className="bg-green-500 w-full text-white hover:bg-green-600"
               >
-                Give up
+                Start
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="bg-zinc-200 dark:bg-zinc-800 text-white">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure you want to stop the timer?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Keep pushing and reach your goal!
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setShowAlert(false)}>Keep going</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmStop}>Give up</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        ) : (
-          <Button
-            onClick={startTimer}
-            className="bg-green-500 w-full text-white hover:bg-green-600"
-          >
-            Start
-          </Button>
-        )}
-      </div>
-      
-      <div className="mt-3 w-[35%]">
-        <Select 
-          onValueChange={onChangeTimer}
-          disabled = {isRunning}
-        >
-          <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
-            <SelectValue placeholder="Timer" />
-          </SelectTrigger>
-          <SelectContent className="bg-white/20 backdrop-blur-md">
-            <SelectItem value="Stopwatch">Stopwatch</SelectItem>
-            <SelectItem value="Timer">Timer</SelectItem>
-            <SelectItem value="Pomodoro">Pomodoro</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="mt-3 w-[35%]">
-          <Select 
-            value={activity} 
-            onValueChange={(value) => setActivity(value)}
-            disabled = {isRunning}
-          >
-          <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
-            <SelectValue placeholder="Stopwatch" />
-          </SelectTrigger>
-          <SelectContent className="bg-white/20 backdrop-blur-md">
-            <SelectItem value="Study">Study</SelectItem>
-            <SelectItem value="Workout">Workout</SelectItem>
-            <SelectItem value="Other">Other</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="text-zinc-100 mt-12 text-center text-lg">
-        Focused {formatTimeForDaily(studyTimeToday)} today
+            )}
+          </div>
+
+          <div className="mt-3 w-[35%]">
+            <Select onValueChange={onChangeTimer} disabled={isRunning}>
+              <SelectTrigger
+                className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}
+              >
+                <SelectValue placeholder="Timer" />
+              </SelectTrigger>
+              <SelectContent className="bg-white/20 backdrop-blur-md">
+                <SelectItem value="Stopwatch">Stopwatch</SelectItem>
+                <SelectItem value="Timer">Timer</SelectItem>
+                <SelectItem value="Pomodoro">Pomodoro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="mt-3 w-[35%]">
+            <Select
+              value={activity}
+              onValueChange={(value) => setActivity(value)}
+              disabled={isRunning}
+            >
+              <SelectTrigger
+                className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}
+              >
+                <SelectValue placeholder="Stopwatch" />
+              </SelectTrigger>
+              <SelectContent className="bg-white/20 backdrop-blur-md">
+                <SelectItem value="Study">Study</SelectItem>
+                <SelectItem value="Workout">Workout</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="text-zinc-100 mt-12 text-center text-lg">
+            Focused {formatTimeForDaily(studyTimeToday)} today
+          </div>
+        </div>
       </div>
     </div>
-    
-  </div>
-</div>
-  );
+  )
+);
+
 };
 
 export default Timer;

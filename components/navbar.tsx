@@ -7,19 +7,20 @@ import { Timer, TimerOff, BarChart2, BookOpen, Dumbbell, PenTool } from 'lucide-
 import { useEffect, useState } from 'react';
 
 const Navbar = () => {
-  const { isRunning } = useTimerStore() as { isRunning: boolean };
+  const [isClient, setIsClient] = useState(false);
+  const { isRunning } = useTimerStore();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
+    
     const handleScroll = () => {
       const isScrolled = window.scrollY > 10;
       if (isScrolled !== scrolled) {
         setScrolled(isScrolled);
       }
     };
-
     window.addEventListener('scroll', handleScroll);
-
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
@@ -61,9 +62,11 @@ const Navbar = () => {
       </div>
       
       <div className="flex items-center space-x-4">
-        <div className="text-green-400">
-          {isRunning ? <Timer size={24} /> : <TimerOff size={24} />}
-        </div>
+        {isClient && (
+          <div className="text-green-400">
+            {isRunning ? <Timer size={24} /> : <TimerOff size={24} />}
+          </div>
+        )}
         <ModeToggle />
         <UserButton />
       </div>

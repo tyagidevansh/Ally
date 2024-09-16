@@ -1,11 +1,11 @@
-import { Bar, BarChart, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts"
+import { Bar, BarChart, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts"
 import { ChartConfig, ChartContainer } from "@/components/ui/chart"
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 
 import { addDays, format, setDate } from "date-fns";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, Minus, Plus } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
@@ -26,6 +26,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer"
+import { setGlobal } from "next/dist/trace";
 
 const chartConfig = {
   time: {
@@ -52,6 +64,48 @@ const testChartData = [
  { date: "Aug 14", time: 12222222 },
  { date: "Aug 15", time: 13343234 },
  { date: "Aug 16", time: 23333231 }
+]
+
+const sampleGoalData = [
+  {
+    goal: 400,
+  },
+  {
+    goal: 300,
+  },
+  {
+    goal: 200,
+  },
+  {
+    goal: 300,
+  },
+  {
+    goal: 200,
+  },
+  {
+    goal: 278,
+  },
+  {
+    goal: 189,
+  },
+  {
+    goal: 239,
+  },
+  {
+    goal: 300,
+  },
+  {
+    goal: 200,
+  },
+  {
+    goal: 278,
+  },
+  {
+    goal: 189,
+  },
+  {
+    goal: 349,
+  },
 ]
 
 const formatTime = (time: number) => {
@@ -82,7 +136,9 @@ const generateTicks = (maxValue : number) => {
 const Graph = () => {
   const [chartData, setChartData] = useState<any[]>([]);
   const [chartLoading, setChartLoading] = useState<boolean>(true);
-  const [dropdownSelection, setDropdownSelection] = useState("30"); //7, week, 30, month, year
+  const [dropdownSelection, setDropdownSelection] = useState<string>("30"); //7, week, 30, month, year
+  const [byMonth, setByMonth] = useState<boolean>(false);
+  const [dailyGoal, setDailyGoal] = useState<number>(180);
 
   const [date, setDate] = useState<DateRange | undefined>({
     from: addDays(new Date(), -30),
@@ -90,26 +146,85 @@ const Graph = () => {
   })
 
   useEffect(() => {
-  if (date?.from && date?.to) {
-    handleClick();
-  }
-}, [date]);
+    if (dropdownSelection !== "custom") {
+      calculateDateRange();
+    }
+  }, [dropdownSelection]);
 
-  const handleClick = async () => {
+  useEffect(() => {
+    if (date?.from && date?.to) {
+      handleRequest();
+      console.log("called")
+    }
+  }, [date]);
+
+  const calculateDateRange = () => {
+    let start: Date, end: Date;
+    setByMonth(false);
+
+    switch (dropdownSelection) {
+      case "7":
+        end = new Date();
+        start = addDays(end, -7);
+        break;
+      case "week":
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+        start = new Date(now);
+        start.setDate(now.getDate() - dayOfWeek); // start of the week
+        start.setHours(0, 0, 0, 0);
+        end = new Date(start);
+        end.setDate(start.getDate() + 6); //end of the week
+        end.setHours(23, 59, 59, 999);
+        break;
+      case "30":
+        end = new Date();
+        start = addDays(end, -30);
+        break;
+      case "month":
+        const currentMonth = new Date();
+        start = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1); // start of the month
+        end = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0); // end of the month
+        break;
+      case "year":
+        const currentYear = new Date().getFullYear();
+        start = new Date(currentYear, 0, 1);
+        end = new Date(currentYear, 11, 31, 23, 59, 59, 999);
+        setByMonth(true);
+        break;
+      default:
+        return;
+    }
+
+    setDate({ from: start, to: end });
+  };
+
+  const handleRequest = async () => {
     setChartLoading(true);
     try {
       const response = await axios.get("/api/graphs", {
         params: {
-          startTime: date?.from? date.from.toISOString() : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString,
-          endTime: date?.to? date.to.toISOString() : new Date(Date.now()).toISOString(),
-        }    
+          startTime: date?.from?.toISOString(),
+          endTime: date?.to?.toISOString(),
+          byMonth: byMonth,
+        },
       });
-      console.log(response.data.chartData);
       setChartData(response.data.chartData);
       setChartLoading(false);
     } catch (error) {
-      console.log("graph api handle click error", error);
+      console.error("Error fetching chart data:", error);
+      setChartLoading(false);
     }
+  };
+
+  const handleGoalChange = (adjustment: number) => {
+    setDailyGoal(Math.max(30, Math.min(600, dailyGoal + adjustment)));
+  }
+
+  const minutesToStr = (time: number) => {
+    const hours = time / 60;
+
+    return `${hours} hours`
   }
 
   const formatYAxis = (milliseconds: number) => {
@@ -197,12 +312,85 @@ const Graph = () => {
           />
         </PopoverContent>
       </Popover>
+
+      <span>Goal: {dailyGoal}</span>
+
+      <Drawer>
+        <DrawerTrigger asChild>
+            <Button variant = "outline">Change goal</Button>
+        </DrawerTrigger>
+        <DrawerContent className="bg-black">
+          <div className="mx-auto w-full max-w-sm">
+            <DrawerHeader>
+              <DrawerTitle className="text-green-500">
+                Daily Focus Goal
+              </DrawerTitle>
+              <DrawerDescription>
+                Set your daily focus goal.
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="p-4 pb-0">
+              <div className="flex items-center justify-center space-x-2">
+                <Button
+                  variant = "outline"
+                  size = "icon"
+                  className="h-8 w-8 shrink-0 rounded-full"
+                  onClick = {() => handleGoalChange(-30)}
+                  disabled = {dailyGoal <= 30}
+                >
+                  <Minus className="h-4 w-4"/>
+                  <span className="sr-only">Decrease</span>
+                </Button>
+                <div className="flex-1 text-center">
+                  <div className="text-6xl font-bold tracking-tighter">
+                    {minutesToStr(dailyGoal)}
+                  </div>
+                  <div className="text-[0.70rem] uppercase text-muted-foreground">
+                    Per day
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 rounded-full"
+                  onClick={() => handleGoalChange(30)}
+                  disabled = {dailyGoal >= 600}
+                >
+                  <Plus className="h-4 w-4"/>
+                  <span className="sr-only">Increase</span>
+                </Button>
+              </div>
+              <div className="mt-3 h-[120px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={sampleGoalData}>
+                    <Bar
+                      dataKey="goal"
+                      style={
+                        {
+                          fill: "#22c55e",
+                          opacity: 0.9,
+                        } as React.CSSProperties
+                      }
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+              <DrawerFooter>
+              <Button>Set Goal</Button>
+              <DrawerClose asChild className="text-green-500">
+                <Button variant="outline">Cancel</Button>
+              </DrawerClose>
+            </DrawerFooter>          
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
  
       <div>
         {chartLoading ? (
           <div className="flex flex-col justify-center items-center h-full">
-            <div className="inline-block mt-48 w-8 h-8 rounded-full border-4 border-black border-t-transparent animate-spin">
+            <div className="inline-block mt-[20%] w-8 h-8 rounded-full border-4 border-black border-t-transparent animate-spin">
               <LoaderCircle/>
             </div>
             <div className="mt-2">

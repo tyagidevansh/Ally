@@ -11,6 +11,8 @@ import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import useTimerStore from "@/store/timerStore";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type Environment = {
   image: string;
@@ -34,6 +36,7 @@ const Home = () => {
   const [quote, setQuote] = useState("");
   const [currentEnv, setCurrentEnv] = useState<Environment>(environments[0]);
   const sliderRef = useRef<any>(null);
+  const { isRunning } = useTimerStore();
 
   const settings = {
     dots: false,
