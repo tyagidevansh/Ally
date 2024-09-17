@@ -22,6 +22,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useNotifications } from "@/hooks/use-notification";
+import { useTimerCommunication } from "@/lib/timer-communication";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface TimerProps {
@@ -31,7 +32,7 @@ interface TimerProps {
 const Timer = ({ onChangeTimer }: TimerProps) => {
   const [totalTime, setTotalTime] = useState(10800); // 180 minutes in seconds
   const [timeLeft, setTimeLeft] = useState(600);
-  const { isRunning, setIsRunning } = useTimerStore() as { isRunning: boolean, setIsRunning: (value: boolean) => void };
+  const { setIsRunning } = useTimerStore() as { setIsRunning: (value: boolean) => void };
   const [activity, setActivity] = useState("Study");
   const [isDragging, setIsDragging] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
@@ -42,8 +43,10 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   const startTimeRef = useRef<number | null>(null);
   const selectedTimeRef = useRef<number>(10800);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const {startTime, setStartTime} = useTimerStore() as {startTime: number, setStartTime: (value: number) => void};
+  const {isRunning, broadcastTimerUpdate} = useTimerCommunication();
   const [showRunningAlert, setShowRunningAlert] = useState<boolean>(false);
-  
+
   const router = useRouter();
   const { sendNotification } = useNotifications();
 
@@ -96,8 +99,10 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   
   const startTimer = useCallback(() => {
     startTimeRef.current = Date.now();
+    setStartTime(Date.now());
     selectedTimeRef.current = timeLeft;
     setIsRunning(true);
+    broadcastTimerUpdate();
     setTotalTime(timeLeft);
     timerRef.current = requestAnimationFrame(updateTimer);
 
@@ -118,6 +123,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
       clearInterval(intervalRef.current);
     }
     setIsRunning(false);
+    broadcastTimerUpdate();
     const endTime = Date.now();
     const duration = endTime - (startTimeRef.current ?? endTime);
     
@@ -196,6 +202,11 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     selectedTimeRef.current = newTime;
   };
 
+  useEffect(() => {
+    if (isRunning) {
+      setShowRunningAlert(true);
+    }
+  }, [])
 
   useEffect(() => {
     const handleGlobalMouseUp = () => setIsDragging(false);
@@ -242,12 +253,6 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   useEffect(() => {
     fetchTodayStudyTime();
   }, [isRunning]);
-
-  useEffect(() => {
-    if (isRunning) {
-      setShowRunningAlert(true);
-    } 
-  }, [])
 
   return (
   showRunningAlert ? (

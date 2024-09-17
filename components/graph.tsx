@@ -313,11 +313,11 @@ const Graph = () => {
         </PopoverContent>
       </Popover>
 
-      <span>Goal: {dailyGoal}</span>
-
+      <span className="border p-2 ml-5 rounded-md text-sm">Daily Goal : {minutesToStr(dailyGoal)}</span>
+      
       <Drawer>
         <DrawerTrigger asChild>
-            <Button variant = "outline">Change goal</Button>
+          <Button variant = "outline" className="text-green-500">Change</Button>
         </DrawerTrigger>
         <DrawerContent className="bg-black">
           <div className="mx-auto w-full max-w-sm">
@@ -377,9 +377,8 @@ const Graph = () => {
               </div>
             </div>
               <DrawerFooter>
-              <Button>Set Goal</Button>
-              <DrawerClose asChild className="text-green-500">
-                <Button variant="outline">Cancel</Button>
+              <DrawerClose asChild>
+                <Button>Set Goal</Button>
               </DrawerClose>
             </DrawerFooter>          
           </div>

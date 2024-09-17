@@ -43,7 +43,7 @@ const dashboard = () => {
             Calendar?
           </DashboardBox>
           <DashboardBox>
-            Bottom element 3
+            Coins/points/month leaderboard?
           </DashboardBox>
         </div>
 

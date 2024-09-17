@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTimerCommunication } from "@/lib/timer-communication";
 
 interface StopwatchProps {
   autoStart?: boolean;
@@ -29,7 +30,6 @@ interface StopwatchProps {
 }
 
 const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"  }: StopwatchProps) => {
-  const {isRunning, setIsRunning} = useTimerStore() as { isRunning: boolean, setIsRunning: (value: boolean) => void };
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showAlert, setShowAlert] = useState(false);
   const [activity, setActivity] = useState(initialActivity);
@@ -38,6 +38,9 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
   const startTimeRef = useRef<number | null>(null);
   const intervalRef = useRef<number | null>(null);
   const router = useRouter();
+  const { isRunning, setIsRunning, runningCount, setRunningCount } = useTimerStore();
+  const { broadcastTimerUpdate } = useTimerCommunication();
+  const [isRunningLocal, setIsRunningLocal] = useState(false);
 
 
   const formatTime = (time: number) => {
@@ -82,38 +85,60 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
   const startTimer = useCallback(() => {
     const startTime = Date.now();
     startTimeRef.current = startTime;
+    setIsRunningLocal(true);
+    const currentRunningCount = useTimerStore.getState().runningCount;
+    setRunningCount(currentRunningCount + 1);
     setIsRunning(true);
+    broadcastTimerUpdate();
     intervalRef.current = window.setInterval(() => {
       updateTimer();
       document.title = `${formatTime(Date.now() - startTime)} | Ally`;
     }, 1000);
-  }, [updateTimer]);
+  }, [setIsRunning, setRunningCount, broadcastTimerUpdate]);
 
   const stopTimer = useCallback(async () => {
-    if (startTimeRef.current !== null) {
-      const endTime = Date.now();
-      const duration = endTime - startTimeRef.current;
-      setIsRunning(false);
-      if (intervalRef.current !== null) {
-        clearInterval(intervalRef.current);
-      }
+  if (startTimeRef.current !== null) {
+    const endTime = Date.now();
+    const duration = endTime - startTimeRef.current;
 
-      try {
-        const response = await axios.post("/api/timer-log", {
-          startTime: new Date(startTimeRef.current).toISOString(),
-          endTime: new Date(endTime).toISOString(),
-          duration,
-          activity,
-        });
-      } catch (error) {
-        console.error("Error saving timer log:", error);
-      }
-      setElapsedTime(0);
-      startTimeRef.current = null;
-      document.title = "Ally";
-      router.refresh();
+    const currentRunningCount = useTimerStore.getState().runningCount;
+    setRunningCount(Math.max(0, currentRunningCount - 1)) 
+
+    setIsRunningLocal(false);
+    broadcastTimerUpdate();
+
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
     }
-  }, [router, activity]);
+
+    try {
+      const response = await axios.post("/api/timer-log", {
+        startTime: new Date(startTimeRef.current).toISOString(),
+        endTime: new Date(endTime).toISOString(),
+        duration,
+        activity,
+      });
+    } catch (error) {
+      console.error("Error saving timer log:", error);
+    }
+
+    setElapsedTime(0);
+    startTimeRef.current = null;
+    document.title = "Ally";
+    router.refresh();
+  }
+}, [router, activity, setRunningCount, broadcastTimerUpdate]);
+
+  useEffect(() => {
+    console.log("Running count changed:", runningCount); 
+    if (runningCount <= 0) {
+      setIsRunning(false);
+    } else {
+      setIsRunning(true);
+    }
+  }, [runningCount, setIsRunning]);
+
+
 
   useEffect(() => {
     return () => {
@@ -165,7 +190,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
         
         <div className="flex flex-col items-center w-full max-w-[350px]">
           <div className="mb-4 w-[40%]">
-            {isRunning ? (
+            {isRunningLocal ? (
               <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
                 <AlertDialogTrigger asChild>
                   <Button
@@ -203,9 +228,9 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
               <div className="mt-3 w-[35%]">
               <Select 
                 onValueChange={onChangeTimer}
-                disabled = {isRunning}
+                disabled = {isRunningLocal}
               >
-                  <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
+                  <SelectTrigger className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
                     <SelectValue placeholder="Stopwatch" />
                   </SelectTrigger>
                   <SelectContent className="bg-white/20 backdrop-blur-md">
@@ -220,9 +245,9 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                 <Select 
                   value={activity} 
                   onValueChange={(value) => setActivity(value)}
-                  disabled = {isRunning}
+                  disabled = {isRunningLocal}
                 >
-                  <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
+                  <SelectTrigger className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
                     <SelectValue placeholder="Stopwatch" />
                   </SelectTrigger>
                   <SelectContent className="bg-white/20 backdrop-blur-md">

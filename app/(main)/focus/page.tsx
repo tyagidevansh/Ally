@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import useTimerStore from "@/store/timerStore";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useTimerCommunication } from "@/lib/timer-communication";
 
 type Environment = {
   image: string;
@@ -32,11 +33,12 @@ const environments: Environment[] = [
 ];
 
 const Home = () => {
-  const [selectedComponent, setSelectedComponent] = useState("Timer");
+  const [selectedComponent, setSelectedComponent] = useState("Stopwatch");
   const [quote, setQuote] = useState("");
   const [currentEnv, setCurrentEnv] = useState<Environment>(environments[0]);
   const sliderRef = useRef<any>(null);
-  const { isRunning } = useTimerStore();
+  const { setRunningCount, setIsRunning } = useTimerStore() as { setRunningCount: (value: number) => void, setIsRunning: (value: boolean) => void };
+  const {isRunning, runningCount, broadcastTimerUpdate} = useTimerCommunication();
 
   const settings = {
     dots: false,
@@ -67,6 +69,28 @@ const Home = () => {
   useEffect(() => {
     getRandomQuote();
   }, []);
+
+  
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (isRunning) {
+        event.preventDefault();
+        event.returnValue = '';
+        setRunningCount(runningCount - 1);
+        if (runningCount == 0) {
+          setIsRunning(false);
+        }
+        broadcastTimerUpdate();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isRunning]);
 
   const renderComponent = () => {
     switch(selectedComponent) {
