@@ -102,7 +102,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
     const duration = endTime - startTimeRef.current;
 
     const currentRunningCount = useTimerStore.getState().runningCount;
-    setRunningCount(Math.max(0, currentRunningCount - 1)) 
+    setRunningCount(Math.max(0, currentRunningCount - 1)); 
 
     setIsRunningLocal(false);
     broadcastTimerUpdate();
@@ -130,7 +130,6 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
 }, [router, activity, setRunningCount, broadcastTimerUpdate]);
 
   useEffect(() => {
-    console.log("Running count changed:", runningCount); 
     if (runningCount <= 0) {
       setIsRunning(false);
     } else {
@@ -138,6 +137,35 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
     }
   }, [runningCount, setIsRunning]);
 
+
+  useEffect(() => {
+  const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    if (isRunningLocal) {
+      event.preventDefault();
+      event.returnValue = '';  
+    }
+  };
+
+  const handleUnload = () => {
+    if (isRunningLocal) {
+      
+      const currentRunningCount = useTimerStore.getState().runningCount;
+      setRunningCount(Math.max(0, currentRunningCount - 1));
+      if (runningCount === 1) {
+        setIsRunning(false);
+      }
+      broadcastTimerUpdate();
+    }
+  };
+
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  window.addEventListener('unload', handleUnload);
+
+  return () => {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.removeEventListener('unload', handleUnload);
+  };
+}, [isRunningLocal, runningCount, broadcastTimerUpdate, setIsRunning, setRunningCount]);
 
 
   useEffect(() => {
@@ -252,7 +280,9 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                   </SelectTrigger>
                   <SelectContent className="bg-white/20 backdrop-blur-md">
                     <SelectItem value="Study">Study</SelectItem>
-                    <SelectItem value="Workout">Workout</SelectItem>
+                    <SelectItem value="Reading">Reading</SelectItem>
+                    <SelectItem value="Coding">Coding</SelectItem>
+                    <SelectItem value="Meditation">Meditation</SelectItem>
                     <SelectItem value="Other">Other</SelectItem>
                   </SelectContent>
                 </Select>

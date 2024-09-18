@@ -24,11 +24,10 @@ const dashboard = () => {
         </DashboardBox> 
 
         <DashboardBox className="row-span-1">
-          Stats maybe? <br />
-          Day total (up/down) <br />
-          Week total <br />
-          Month total so far <br />
-          Streak of hitting daily goal <br />
+          Focus Trend like forest<br />
+          This month to this day and then a line stating the expected total time based on current average <br />
+          This month compared with same time last month <br />
+          This month compared with same time two months ago <br />         
         </DashboardBox>
 
         <DashboardBox className="row-span-2">
@@ -37,10 +36,10 @@ const dashboard = () => {
 
         <div className="grid grid-cols-3 gap-4 row-span-1">
           <DashboardBox>
-            Recent sessions?
+            Recent sessions/split by activity?
           </DashboardBox>
           <DashboardBox>
-            Calendar?
+            Most productive hours / most productive day of the week line graph?
           </DashboardBox>
           <DashboardBox>
             Coins/points/month leaderboard?

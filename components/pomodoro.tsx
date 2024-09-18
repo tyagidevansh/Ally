@@ -21,6 +21,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import useTimerStore from '@/store/timerStore';
+import { useTimerCommunication } from '@/lib/timer-communication';
 
 const Timer = require('timer-for-pomodoro');
 
@@ -38,7 +40,7 @@ interface PomodoroComponentProps {
 
 const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
   const [timerState, setTimerState] = useState<TimerState | null>(null);
-  const [isRunning, setIsRunning] = useState(false);
+  const [isRunningLocal, setIsRunningLocal] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [activity, setActivity] = useState("Study");
   const [showAlert, setShowAlert] = useState(false);
@@ -51,6 +53,8 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
   const startTimeRef = useRef<number | null>(null);
   const lastStatusRef = useRef<'work' | 'break' | null>(null);
   const pauseTimeRef = useRef<number | null>(null);
+  const { isRunning, setIsRunning, runningCount, setRunningCount } = useTimerStore();
+  const { broadcastTimerUpdate } = useTimerCommunication();
 
   useEffect(() => {
     timerRef.current = new Timer(25, 5, 20);
@@ -99,7 +103,11 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
   };
 
   const handleStart = () => {
+    setIsRunningLocal(true);
+    const currentRunningCount = useTimerStore.getState().runningCount;
+    setRunningCount(currentRunningCount + 1);
     setIsRunning(true);
+    broadcastTimerUpdate();
     setPausedTime(0);
     timerRef.current.start();
     setIsPaused(false);
@@ -112,7 +120,10 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
 
   const handleStop = async () => {
     setShowAlert(false);
-    setIsRunning(false);
+    setIsRunningLocal(false);
+    const currentRunningCount = useTimerStore.getState().runningCount;
+    setRunningCount(Math.max(0, currentRunningCount - 1)); 
+    broadcastTimerUpdate();
     timerRef.current.stop();
     if (timerState?.status === "work") {
       await logWorkTime();
@@ -200,10 +211,47 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
   };
 
   useEffect(() => {
-    fetchTodayStudyTime();
-  }, [isRunning]);
+    if (runningCount <= 0) {
+      setIsRunning(false);
+    } else {
+      setIsRunning(true);
+    }
+  }, [runningCount, setIsRunning]);
 
-  const percentage = isRunning 
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (isRunningLocal) {
+        event.preventDefault();
+        event.returnValue = '';  
+      }
+    };
+
+    const handleUnload = () => {
+      if (isRunningLocal) {
+        
+        const currentRunningCount = useTimerStore.getState().runningCount;
+        setRunningCount(Math.max(0, currentRunningCount - 1));
+        if (runningCount === 1) {
+          setIsRunning(false);
+        }
+        broadcastTimerUpdate();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('unload', handleUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('unload', handleUnload);
+    };
+  }, [isRunningLocal, runningCount, broadcastTimerUpdate, setIsRunning, setRunningCount]);
+
+  useEffect(() => {
+    fetchTodayStudyTime();
+  }, [isRunningLocal]);
+
+  const percentage = isRunningLocal 
   ? ((timerState?.raw ?? 1500) / (timerState?.status === "work" ? 1500 : 300)) * 100
   : 100;
   const circumference = 2 * Math.PI * 118;
@@ -249,7 +297,7 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
         <div className="flex flex-col items-center w-full max-w-[350px]">
           <div className="mb-4 w-[40%] text-white">
             <AnimatePresence mode="wait">
-              {!isRunning ? (
+              {!isRunningLocal ? (
                 <motion.div
                   key="start"
                   initial={{ opacity: 0 }}
@@ -324,9 +372,9 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
         <div className="mt-3 w-[35%]">
           <Select 
             onValueChange={onChangeTimer}
-            disabled={isRunning}
+            disabled={isRunningLocal}
           >
-            <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
+            <SelectTrigger className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
               <SelectValue placeholder="Pomodoro" />
             </SelectTrigger>
             <SelectContent className="bg-white/20 backdrop-blur-md">
@@ -341,14 +389,16 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
           <Select 
             value={activity} 
             onValueChange={(value) => setActivity(value)}
-            disabled={isRunning}
+            disabled={isRunningLocal}
           >
-            <SelectTrigger className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
+            <SelectTrigger className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
               <SelectValue placeholder="Study" />
             </SelectTrigger>
             <SelectContent className="bg-white/20 backdrop-blur-md">
               <SelectItem value="Study">Study</SelectItem>
-              <SelectItem value="Workout">Workout</SelectItem>
+              <SelectItem value="Reading">Reading</SelectItem>
+              <SelectItem value="Coding">Coding</SelectItem>
+              <SelectItem value="Meditation">Meditation</SelectItem>
               <SelectItem value="Other">Other</SelectItem>
             </SelectContent>
           </Select>

@@ -1,5 +1,5 @@
 import { Bar, BarChart, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts"
-import { ChartConfig, ChartContainer } from "@/components/ui/chart"
+import { ChartConfig, ChartContainer, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
@@ -40,10 +40,26 @@ import {
 import { setGlobal } from "next/dist/trace";
 
 const chartConfig = {
-  time: {
-    label: "Time focused",
+  Study: {
+    label: "Studying",
     color: "#22c55e",
   },
+  Reading: {
+    label: "Reading",
+    color: "#3b82f6",
+  },
+  Coding: {
+    label: "Coding",
+    color: "#fb7185",
+  }, 
+  Meditation: {
+    label: "Meditation",
+    color: "#a855f7",
+  }, 
+  Other: {
+    label: "Other",
+    color: "#f59e0b"
+  }
 } satisfies ChartConfig
 
 const testChartData = [
@@ -154,7 +170,6 @@ const Graph = () => {
   useEffect(() => {
     if (date?.from && date?.to) {
       handleRequest();
-      console.log("called")
     }
   }, [date]);
 
@@ -211,6 +226,8 @@ const Graph = () => {
       });
       setChartData(response.data.chartData);
       setChartLoading(false);
+      console.log("component chart data")
+      console.log(chartData)
     } catch (error) {
       console.error("Error fetching chart data:", error);
       setChartLoading(false);
@@ -390,34 +407,41 @@ const Graph = () => {
         {chartLoading ? (
           <div className="flex flex-col justify-center items-center h-full">
             <div className="inline-block mt-[20%] w-8 h-8 rounded-full border-4 border-black border-t-transparent animate-spin">
-              <LoaderCircle/>
+              <LoaderCircle />
             </div>
-            <div className="mt-2">
-              Fetching the latest data
-            </div>
-          </div>     
+            <div className="mt-2">Fetching the latest data</div>
+          </div>
         ) : (
           <ChartContainer config={chartConfig} className="h-full w-full">
-            <BarChart accessibilityLayer data={chartData} margin={{ top: 20, right: 30, left: 30, bottom: 5 }}>
-              <CartesianGrid vertical = {false} />
-              <XAxis 
-                dataKey="date"
-                tickLine={false}
-                tickMargin={5}
-                axisLine={false}
-              />
+            <BarChart
+              data={chartData} // Ensure chartData matches the expected format
+              margin={{ top: 20, right: 30, left: 30, bottom: 5 }}
+            >
+              <CartesianGrid vertical={false} />
+              <XAxis dataKey="date" tickLine={false} tickMargin={5} axisLine={false} />
               <YAxis
                 tickFormatter={formatYAxis}
                 tickLine={false}
                 axisLine={false}
                 width={60}
-                ticks = {ticks}
+                ticks={ticks}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="time" fill="var(--color-time)" radius={2} />
+              <ChartLegend content={<ChartLegendContent />} />
+              
+              {Object.keys(chartConfig).map((key) => (
+                <Bar
+                  key={key}
+                  dataKey={key} 
+                  stackId="a" 
+                  fill={chartConfig[key as keyof typeof chartConfig].color} 
+                  radius={0}
+                />
+              ))}
             </BarChart>
           </ChartContainer>
         )}
+
       </div>
     </div>
   );

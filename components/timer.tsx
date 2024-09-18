@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useNotifications } from "@/hooks/use-notification";
 import { useTimerCommunication } from "@/lib/timer-communication";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Input } from "@/components/ui/input";
 
 interface TimerProps {
   onChangeTimer: (value: string) => void;
@@ -32,7 +32,6 @@ interface TimerProps {
 const Timer = ({ onChangeTimer }: TimerProps) => {
   const [totalTime, setTotalTime] = useState(10800); // 180 minutes in seconds
   const [timeLeft, setTimeLeft] = useState(600);
-  const { setIsRunning } = useTimerStore() as { setIsRunning: (value: boolean) => void };
   const [activity, setActivity] = useState("Study");
   const [isDragging, setIsDragging] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
@@ -43,9 +42,9 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   const startTimeRef = useRef<number | null>(null);
   const selectedTimeRef = useRef<number>(10800);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const {startTime, setStartTime} = useTimerStore() as {startTime: number, setStartTime: (value: number) => void};
-  const {isRunning, broadcastTimerUpdate} = useTimerCommunication();
-  const [showRunningAlert, setShowRunningAlert] = useState<boolean>(false);
+  const { isRunning, setIsRunning, runningCount, setRunningCount } = useTimerStore();
+  const { broadcastTimerUpdate } = useTimerCommunication();
+  const [isRunningLocal, setIsRunningLocal] = useState(false);
 
   const router = useRouter();
   const { sendNotification } = useNotifications();
@@ -99,8 +98,10 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   
   const startTimer = useCallback(() => {
     startTimeRef.current = Date.now();
-    setStartTime(Date.now());
     selectedTimeRef.current = timeLeft;
+    setIsRunningLocal(true);
+    const currentRunningCount = useTimerStore.getState().runningCount;
+    setRunningCount(currentRunningCount + 1);
     setIsRunning(true);
     broadcastTimerUpdate();
     setTotalTime(timeLeft);
@@ -122,7 +123,12 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     if (intervalRef.current !== null) {
       clearInterval(intervalRef.current);
     }
-    setIsRunning(false);
+
+    const currentRunningCount = useTimerStore.getState().runningCount;
+    setRunningCount(Math.max(0, currentRunningCount - 1)) 
+
+
+    setIsRunningLocal(false);
     broadcastTimerUpdate();
     const endTime = Date.now();
     const duration = endTime - (startTimeRef.current ?? endTime);
@@ -143,7 +149,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     setTotalTime(10800);
     document.title = "Ally";
     router.refresh();
-  }, [setIsRunning, activity, router]);
+  }, [setIsRunningLocal, activity, router]);
   
   useEffect(() => {
     return () => {
@@ -156,19 +162,56 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     };
   }, []);
 
+  useEffect(() => {
+    if (runningCount <= 0) {
+      setIsRunning(false);
+    } else {
+      setIsRunning(true);
+    }
+  }, [runningCount, setIsRunning]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (isRunningLocal) {
+        event.preventDefault();
+        event.returnValue = '';  
+      }
+    };
+
+    const handleUnload = () => {
+      if (isRunningLocal) {
+        
+        const currentRunningCount = useTimerStore.getState().runningCount;
+        setRunningCount(Math.max(0, currentRunningCount - 1));
+        if (runningCount === 1) {
+          setIsRunning(false);
+        }
+        broadcastTimerUpdate();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('unload', handleUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('unload', handleUnload);
+    };
+  }, [isRunningLocal, runningCount, broadcastTimerUpdate, setIsRunning, setRunningCount]);
+
   const percentage = (timeLeft / totalTime) * 100;
   const circumference = 2 * Math.PI * 118;
   const offset = circumference - (percentage / 100) * circumference;
 
   const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!isRunning) {
+    if (!isRunningLocal) {
       setIsDragging(true);
       updateTime(event);
     }
   };
 
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (isDragging && !isRunning) {
+    if (isDragging && !isRunningLocal) {
       updateTime(event);
     }
   };
@@ -203,15 +246,9 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   };
 
   useEffect(() => {
-    if (isRunning) {
-      setShowRunningAlert(true);
-    }
-  }, [])
-
-  useEffect(() => {
     const handleGlobalMouseUp = () => setIsDragging(false);
     const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (isDragging && !isRunning && svgRef.current) {
+      if (isDragging && !isRunningLocal && svgRef.current) {
         updateTime(e as unknown as React.MouseEvent<HTMLDivElement>);
       }
     };
@@ -223,7 +260,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
       document.removeEventListener('mouseup', handleGlobalMouseUp);
       document.removeEventListener('mousemove', handleGlobalMouseMove);
     };
-  }, [isDragging, isRunning]);
+  }, [isDragging, isRunningLocal]);
 
   const handleStop = () => {
     setShowAlert(true);
@@ -252,130 +289,123 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
 
   useEffect(() => {
     fetchTodayStudyTime();
-  }, [isRunning]);
+  }, [isRunningLocal]);
 
   return (
-  showRunningAlert ? (
-    <div>
-      <Alert variant="destructive">
-        <AlertDescription>
-          A timer is already running. Please stop the running timer to start a new one!
-        </AlertDescription>
-      </Alert>
-    </div> 
-  ) : (
-    <div className="relative h-full flex flex-col items-center select-none">
-      <div className="absolute top-[10%] flex flex-col items-center w-full">
-        <div
-          className="relative w-60 h-60 mb-8"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-        >
-          <svg className="w-full h-full transform -rotate-90 cursor-pointer" ref={svgRef}>
-            <circle
-              cx="120"
-              cy="120"
-              r="118"
-              stroke="#e3ffed"
-              opacity={0.3}
-              strokeWidth="5"
-              fill="transparent"
-              className="w-60 h-60"
-            />
-            <circle
-              cx="120"
-              cy="120"
-              r="118"
-              stroke="#22c55e"
-              strokeWidth="5"
-              fill="transparent"
-              strokeDasharray={circumference}
-              strokeDashoffset={offset}
-              className="w-60 h-60"
-            />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-4xl font-bold">{formatTime(timeLeft)}</span>
-          </div>
+  <div className="relative h-full flex flex-col items-center select-none">
+    <div className="absolute top-[10%] flex flex-col items-center w-full">
+      <div
+        className="relative w-60 h-60 mb-8"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+      >
+        <svg className="w-full h-full transform -rotate-90 cursor-pointer" ref={svgRef}>
+          <circle
+            cx="120"
+            cy="120"
+            r="118"
+            stroke="#e3ffed"
+            opacity={0.3}
+            strokeWidth="5"
+            fill="transparent"
+            className="w-60 h-60"
+          />
+          <circle
+            cx="120"
+            cy="120"
+            r="118"
+            stroke="#22c55e"
+            strokeWidth="5"
+            fill="transparent"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            className="w-60 h-60"
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-4xl font-bold">{formatTime(timeLeft)}</span>
+        </div>
+      </div>
+
+      <div className="flex flex-col items-center w-full max-w-[350px]">
+        <div className="mb-4 w-[40%]">
+          {isRunningLocal ? (
+            <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  onClick={handleStop}
+                  className="bg-red-600 w-full text-white hover:bg-red-500"
+                >
+                  Give up
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="text-white bg-white/30 backdrop:blur-md">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure you want to stop the timer?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Keep pushing and reach your goal!
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setShowAlert(false)}>Keep going</AlertDialogCancel>
+                  <AlertDialogAction onClick={confirmStop}>Give up</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          ) : (
+            <Button
+              onClick={startTimer}
+              className="bg-green-500 w-full text-white hover:bg-green-600"
+            >
+              Start
+            </Button>
+          )}
         </div>
 
-        <div className="flex flex-col items-center w-full max-w-[350px]">
-          <div className="mb-4 w-[40%]">
-            {isRunning ? (
-              <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    onClick={handleStop}
-                    className="bg-red-600 w-full text-white hover:bg-red-500"
-                  >
-                    Give up
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="bg-zinc-200 dark:bg-zinc-800 text-white">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure you want to stop the timer?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Keep pushing and reach your goal!
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setShowAlert(false)}>Keep going</AlertDialogCancel>
-                    <AlertDialogAction onClick={confirmStop}>Give up</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            ) : (
-              <Button
-                onClick={startTimer}
-                className="bg-green-500 w-full text-white hover:bg-green-600"
-              >
-                Start
-              </Button>
-            )}
-          </div>
-
-          <div className="mt-3 w-[35%]">
-            <Select onValueChange={onChangeTimer} disabled={isRunning}>
-              <SelectTrigger
-                className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}
-              >
-                <SelectValue placeholder="Timer" />
-              </SelectTrigger>
-              <SelectContent className="bg-white/20 backdrop-blur-md">
-                <SelectItem value="Stopwatch">Stopwatch</SelectItem>
-                <SelectItem value="Timer">Timer</SelectItem>
-                <SelectItem value="Pomodoro">Pomodoro</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="mt-3 w-[35%]">
-            <Select
-              value={activity}
-              onValueChange={(value) => setActivity(value)}
-              disabled={isRunning}
+        <div className="mt-3 w-[35%]">
+          <Select onValueChange={onChangeTimer} disabled={isRunningLocal}>
+            <SelectTrigger
+              className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}
             >
-              <SelectTrigger
-                className={`w-full ${isRunning ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}
-              >
-                <SelectValue placeholder="Stopwatch" />
-              </SelectTrigger>
-              <SelectContent className="bg-white/20 backdrop-blur-md">
-                <SelectItem value="Study">Study</SelectItem>
-                <SelectItem value="Workout">Workout</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+              <SelectValue placeholder="Timer" />
+            </SelectTrigger>
+            <SelectContent className="bg-white/20 backdrop-blur-md">
+              <SelectItem value="Stopwatch">Stopwatch</SelectItem>
+              <SelectItem value="Timer">Timer</SelectItem>
+              <SelectItem value="Pomodoro">Pomodoro</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-          <div className="text-zinc-100 mt-12 text-center text-lg">
-            Focused {formatTimeForDaily(studyTimeToday)} today
-          </div>
+        <div className="mt-3 w-[35%]">
+          <Select
+            value={activity}
+            onValueChange={(value) => setActivity(value)}
+            disabled={isRunningLocal}
+          >
+            <SelectTrigger
+              className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}
+            >
+              <SelectValue placeholder="Stopwatch" />
+            </SelectTrigger>
+            <SelectContent className="bg-white/20 backdrop-blur-md">
+              <SelectItem value="Study">Study</SelectItem>
+              <SelectItem value="Reading">Reading</SelectItem>
+              <SelectItem value="Coding">Coding</SelectItem>
+              <SelectItem value="Meditation">Meditation</SelectItem>
+              <SelectItem value="Other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="text-zinc-100 mt-12 text-center text-lg">
+          Focused {formatTimeForDaily(studyTimeToday)} today
         </div>
       </div>
     </div>
-  )
+  </div>
+  
 );
 
 };

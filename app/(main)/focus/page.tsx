@@ -12,7 +12,6 @@ import 'slick-carousel/slick/slick-theme.css';
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import useTimerStore from "@/store/timerStore";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useTimerCommunication } from "@/lib/timer-communication";
 
 type Environment = {
@@ -33,7 +32,7 @@ const environments: Environment[] = [
 ];
 
 const Home = () => {
-  const [selectedComponent, setSelectedComponent] = useState("Stopwatch");
+  const [selectedComponent, setSelectedComponent] = useState("Timer");
   const [quote, setQuote] = useState("");
   const [currentEnv, setCurrentEnv] = useState<Environment>(environments[0]);
   const sliderRef = useRef<any>(null);
@@ -69,28 +68,6 @@ const Home = () => {
   useEffect(() => {
     getRandomQuote();
   }, []);
-
-  
-  useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (isRunning) {
-        event.preventDefault();
-        event.returnValue = '';
-        setRunningCount(runningCount - 1);
-        if (runningCount == 0) {
-          setIsRunning(false);
-        }
-        broadcastTimerUpdate();
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [isRunning]);
 
   const renderComponent = () => {
     switch(selectedComponent) {

@@ -26,6 +26,8 @@ export async function GET(req: Request) {
       return new NextResponse("Invalid date format", { status: 400 });
     }
 
+    const activities = ["Study", "Reading", "Coding", "Meditation", "Other"];
+
     const logs = await db.timerLog.findMany({
       where: {
         profileId: profile.id,
@@ -36,7 +38,6 @@ export async function GET(req: Request) {
       },
     });
 
-    //todo : seperate tasks by activity
 
     if (byMonth) {
       const monthMap: { [key: string]: number } = {};
@@ -61,22 +62,29 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: "message recieved", chartData });
 
     } else {
-      const dateMap: { [key: string]: number } = {};
+      const dateMap: { [key: string]: {[key: string] : number} } = {};
 
       logs.forEach((log) => {
         const date = log.startTime.toDateString().slice(4, 10); // MMM DD
         if (!dateMap[date]) {
-          dateMap[date] = 0;
+          dateMap[date] = {};
+          activities.forEach((activity) => {
+            dateMap[date][activity] = 0;
+          });
         }
-        dateMap[date] += log.duration;
+        dateMap[date][log.activity] += log.duration;
       });
 
       const chartData = [];
       for (let dt = new Date(startTime); dt <= endTime; dt.setDate(dt.getDate() + 1)) {
         const date = dt.toDateString().slice(4, 10);
+        const activityTimes: { [key: string]: number } = {};
+        activities.forEach((activity) => {
+          activityTimes[activity] = dateMap[date]?.[activity] || 0;
+        });
         chartData.push({
           date,
-          time: dateMap[date] || 0,
+          ...activityTimes,
         });
       }
 
