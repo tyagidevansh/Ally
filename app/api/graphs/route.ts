@@ -36,31 +36,47 @@ export async function GET(req: Request) {
           lt: new Date(endTime.setDate(endTime.getDate())),
         },
       },
+      orderBy: {
+        startTime: "desc",
+      }
     });
 
+    const chartData = [];
 
     if (byMonth) {
-      const monthMap: { [key: string]: number } = {};
+      const monthMap: { [key: string]: { [key: string]: number } } = {};
 
       logs.forEach((log) => {
-        const month = log.startTime.toLocaleString('default', {month: "short", year: "numeric"});
+        const month = log.startTime.toLocaleString('default', { month: "short", year: "numeric" });
+        
         if (!monthMap[month]) {
-          monthMap[month] = 0;
+          monthMap[month] = {};
+          activities.forEach((activity) => {
+            monthMap[month][activity] = 0;
+          });
         }
-        monthMap[month] += log.duration;
+        
+        monthMap[month][log.activity] += log.duration;
       });
 
-      const chartData = [];
       for (let dt = new Date(startTime); dt <= endTime; dt.setMonth(dt.getMonth() + 1)) {
-        const month = dt.toLocaleString('default', { month: "short", year: "numeric"});
+        const month = dt.toLocaleString('default', { month: "short", year: "numeric" });
+        
+        const activityTimes: { [key: string]: number } = {};
+        let totalTime = 0;
+
+        activities.forEach((activity) => {
+          const time = monthMap[month]?.[activity] || 0;
+          activityTimes[activity] = time;
+          totalTime += time;
+        });
+
         chartData.push({
           date: month.slice(0, 3),
-          time: monthMap[month] || 0,
+          ...activityTimes,
+          totalTime,
         });
       }
-
-      return NextResponse.json({ success: "message recieved", chartData });
-
     } else {
       const dateMap: { [key: string]: {[key: string] : number} } = {};
 
@@ -75,23 +91,34 @@ export async function GET(req: Request) {
         dateMap[date][log.activity] += log.duration;
       });
 
-      const chartData = [];
       for (let dt = new Date(startTime); dt <= endTime; dt.setDate(dt.getDate() + 1)) {
         const date = dt.toDateString().slice(4, 10);
         const activityTimes: { [key: string]: number } = {};
+        let totalTime = 0;
+
         activities.forEach((activity) => {
-          activityTimes[activity] = dateMap[date]?.[activity] || 0;
+          const time = dateMap[date]?.[activity] || 0;
+          activityTimes[activity] = time;
+          totalTime += time;
         });
         chartData.push({
           date,
           ...activityTimes,
+          totalTime,
         });
       }
-
-      return NextResponse.json({ success: "message received", chartData });
     }
 
-    
+    const recentTimes: { [key: string]: [number, string] } = {}; 
+
+    for (let i = 0; i < 10; i++) {
+      const indexTime:string = logs[i].startTime.toISOString()
+      recentTimes[indexTime] = [logs[i].duration, logs[i].activity]
+    }
+
+    console.log(recentTimes);
+
+    return NextResponse.json({ success: "message received", chartData });
   } catch (error) {
     console.log("[GRAPHS ERROR] ", error);
     return new NextResponse("Internal Error", { status: 500 });

@@ -11,8 +11,6 @@ import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import useTimerStore from "@/store/timerStore";
-import { useTimerCommunication } from "@/lib/timer-communication";
 
 type Environment = {
   image: string;
@@ -36,8 +34,6 @@ const Home = () => {
   const [quote, setQuote] = useState("");
   const [currentEnv, setCurrentEnv] = useState<Environment>(environments[0]);
   const sliderRef = useRef<any>(null);
-  const { setRunningCount, setIsRunning } = useTimerStore() as { setRunningCount: (value: number) => void, setIsRunning: (value: boolean) => void };
-  const {isRunning, runningCount, broadcastTimerUpdate} = useTimerCommunication();
 
   const settings = {
     dots: false,

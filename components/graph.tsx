@@ -256,16 +256,16 @@ const Graph = () => {
     return timeStr;
   };
 
-  const maxTime = Math.max(...chartData.map(data => data.time));
+  const maxTime = Math.max(...chartData.map(data => data.totalTime));
 
   const ticks = generateTicks(maxTime);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
+    if (active && payload && payload.length) {;
       return (
         <div className="bg-gray-800 p-2 border border-gray-700 rounded">
           <p className="text-white">{`Date: ${label}`}</p>
-          <p className="text-green-500">{`Time: ${formatTime(payload[0].value)}`}</p>
+          <p className="text-green-500">{`Total: ${formatTime(payload[0].payload.totalTime)}`}</p>
         </div>
       );
     }

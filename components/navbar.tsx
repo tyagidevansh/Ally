@@ -62,7 +62,7 @@ const Navbar = () => {
         <div className="flex items-center space-x-4 relative">
           {isClient && (
             <div className="text-green-400 relative" title={`${runningCount} timer${runningCount === 1 ? '' : 's'} running`}>
-              {isRunning ? (
+              {runningCount > 0 ? (
                 <>
                   <Timer size={24} />
                   <span
@@ -74,6 +74,7 @@ const Navbar = () => {
                 <TimerOff size={24} />
               )}
             </div>
+
           )}
         
          {/* <ModeToggle /> */}

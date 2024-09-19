@@ -1,9 +1,9 @@
 'use client'
 
 import Navbar from "@/components/navbar";
-import { useEffect, useState } from "react";
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import Graph from "@/components/graph";
+import RecentSessions from "@/components/recent-sessions";
 
 const DashboardBox = ({ children, className = "", style }: { children: ReactNode, className?: string, style?: React.CSSProperties }) => (
   <div className={`border border-gray-700 rounded-lg p-4 transition-all duration-300 hover:bg-gray-900 hover:border-green-500 ${className}`} style={style}>
@@ -11,9 +11,7 @@ const DashboardBox = ({ children, className = "", style }: { children: ReactNode
   </div>
 );
 
-
 const dashboard = () => {
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white">
       <Navbar />
@@ -36,7 +34,7 @@ const dashboard = () => {
 
         <div className="grid grid-cols-3 gap-4 row-span-1">
           <DashboardBox>
-            Recent sessions/split by activity?
+            <RecentSessions/>
           </DashboardBox>
           <DashboardBox>
             Most productive hours / most productive day of the week line graph?
