@@ -36,9 +36,6 @@ export async function GET(req: Request) {
           lt: new Date(endTime.setDate(endTime.getDate())),
         },
       },
-      orderBy: {
-        startTime: "desc",
-      }
     });
 
     const chartData = [];
@@ -108,15 +105,6 @@ export async function GET(req: Request) {
         });
       }
     }
-
-    const recentTimes: { [key: string]: [number, string] } = {}; 
-
-    for (let i = 0; i < 10; i++) {
-      const indexTime:string = logs[i].startTime.toISOString()
-      recentTimes[indexTime] = [logs[i].duration, logs[i].activity]
-    }
-
-    console.log(recentTimes);
 
     return NextResponse.json({ success: "message received", chartData });
   } catch (error) {

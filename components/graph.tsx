@@ -37,7 +37,6 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer"
-import { setGlobal } from "next/dist/trace";
 
 const chartConfig = {
   Study: {
@@ -61,26 +60,6 @@ const chartConfig = {
     color: "#f59e0b"
   }
 } satisfies ChartConfig
-
-const testChartData = [
- { date: "Aug 01", time: 2500005 },
- { date: "Aug 02", time: 4656554 },
- { date: "Aug 03", time: 5643521 },
- { date: "Aug 04", time: 5856585 },
- { date: "Aug 05", time: 12495449 },
- { date: "Aug 06", time: 3359292 },
- { date: "Aug 06", time: 3523421 },
- { date: "Aug 07", time: 5321354 },
- { date: "Aug 08", time: 5432544 },
- { date: "Aug 09", time: 6545333 },
- { date: "Aug 10", time: 9658584 },
- { date: "Aug 11", time: 2343352 }, 
- { date: "Aug 12", time: 5453564 },
- { date: "Aug 13", time: 14211334 },
- { date: "Aug 14", time: 12222222 },
- { date: "Aug 15", time: 13343234 },
- { date: "Aug 16", time: 23333231 }
-]
 
 const sampleGoalData = [
   {
@@ -174,7 +153,7 @@ const Graph = () => {
   }, [date]);
 
   const calculateDateRange = () => {
-    let start: Date, end: Date;
+    let start: Date = new Date(), end: Date = new Date();
     setByMonth(false);
 
     switch (dropdownSelection) {
@@ -207,6 +186,15 @@ const Graph = () => {
         end = new Date(currentYear, 11, 31, 23, 59, 59, 999);
         setByMonth(true);
         break;
+      case "custom":
+        if (date?.to) {
+          end = new Date(date.to);
+          end.setHours(23, 59, 59, 999);
+        } else {
+          new Date();
+        }
+        start = date?.from || new Date();
+        break;
       default:
         return;
     }
@@ -215,24 +203,26 @@ const Graph = () => {
   };
 
   const handleRequest = async () => {
+    if (!date?.from || !date?.to) return;
+    
     setChartLoading(true);
+    
     try {
       const response = await axios.get("/api/graphs", {
         params: {
-          startTime: date?.from?.toISOString(),
-          endTime: date?.to?.toISOString(),
+          startTime: date.from.toISOString(),
+          endTime: new Date(date.to.setHours(23, 59, 59, 999)).toISOString(), // Adjust endTime here
           byMonth: byMonth,
         },
       });
       setChartData(response.data.chartData);
-      setChartLoading(false);
-      console.log("component chart data")
-      console.log(chartData)
     } catch (error) {
       console.error("Error fetching chart data:", error);
+    } finally {
       setChartLoading(false);
     }
   };
+
 
   const handleGoalChange = (adjustment: number) => {
     setDailyGoal(Math.max(30, Math.min(600, dailyGoal + adjustment)));
@@ -324,7 +314,15 @@ const Graph = () => {
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={setDate}
+            onSelect={(range) => {
+              if (range?.to) {
+                const toDate = new Date(range.to);
+                toDate.setHours(23, 59, 59, 999); // Ensure the 'to' includes the whole day
+                setDate({ from: range.from, to: toDate });
+              } else {
+                setDate(range);
+              }
+            }}
             numberOfMonths={2}
           />
         </PopoverContent>

@@ -4,6 +4,7 @@ import Navbar from "@/components/navbar";
 import { ReactNode, useEffect } from "react";
 import Graph from "@/components/graph";
 import RecentSessions from "@/components/recent-sessions";
+import FocusTrend from "@/components/focused-time-comparison";
 
 const DashboardBox = ({ children, className = "", style }: { children: ReactNode, className?: string, style?: React.CSSProperties }) => (
   <div className={`border border-gray-700 rounded-lg p-4 transition-all duration-300 hover:bg-gray-900 hover:border-green-500 ${className}`} style={style}>
@@ -22,10 +23,7 @@ const dashboard = () => {
         </DashboardBox> 
 
         <DashboardBox className="row-span-1">
-          Focus Trend like forest<br />
-          This month to this day and then a line stating the expected total time based on current average <br />
-          This month compared with same time last month <br />
-          This month compared with same time two months ago <br />         
+          <FocusTrend/>
         </DashboardBox>
 
         <DashboardBox className="row-span-2">
@@ -40,7 +38,7 @@ const dashboard = () => {
             Most productive hours / most productive day of the week line graph?
           </DashboardBox>
           <DashboardBox>
-            Coins/points/month leaderboard?
+            Coins/points/month leaderboard / daily goal streak?
           </DashboardBox>
         </div>
 
