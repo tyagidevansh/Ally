@@ -52,7 +52,7 @@ const RecentSessions = () => {
   }
 
   return (
-    <div className="h-full w-full overflow-y-auto" style={{ maxHeight: 'calc(100vh / 3)' }}>
+    <div className="h-full w-full custom-scrollbar overflow-y-auto" style={{ maxHeight: 'calc(100vh / 3)' }}>
       <h2 className="text-xl font-bold mb-4 text-green-500">Recent Sessions</h2>
       <div className="space-y-3">
         {sessions.length === 0 ? (

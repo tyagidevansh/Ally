@@ -112,3 +112,32 @@ export async function GET(req: Request) {
     return new NextResponse("Internal Error", { status: 500 });
   }
 }
+
+export async function POST(req: Request) {
+  try {
+    const profile = await currentProfile();
+
+    if (!profile) {
+      return new NextResponse("Unauthorized", { status: 401});
+    }
+
+    const {goal} : {goal : number} = await req.json();
+
+    if (!goal) {
+      return new NextResponse("Empty request", { status: 400});
+    }
+
+    await db.profile.update({
+      where: { id : profile.id },
+      data: {
+        dailyGoal: goal,
+      },
+    });
+
+    return new NextResponse(JSON.stringify({ message: "Goal updated successfully" }), { status: 200 })
+
+  } catch (error) {
+    console.log("daily goal post error ", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
+  }
+}

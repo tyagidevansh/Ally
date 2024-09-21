@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Calendar } from "./ui/calendar";
 
+//make daily goal local storage or something
+
 import {
   Popover,
   PopoverContent,
@@ -224,8 +226,10 @@ const Graph = () => {
   };
 
 
-  const handleGoalChange = (adjustment: number) => {
-    setDailyGoal(Math.max(30, Math.min(600, dailyGoal + adjustment)));
+  const handleGoalChange = async (adjustment: number) => {
+    const newGoal = Math.max(30, Math.min(600, dailyGoal + adjustment));
+    setDailyGoal(newGoal);
+    await axios.post('/api/graphs', { goal : newGoal});
   }
 
   const minutesToStr = (time: number) => {

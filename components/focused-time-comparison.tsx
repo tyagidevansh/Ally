@@ -26,7 +26,6 @@ const FocusTrend = () => {
       try {
         const res = await fetch('/api/focused-time-comparison');
         const data = await res.json();
-        console.log(data);
         setFocusData(data);
         setLoading(false);
       } catch (error) {
@@ -48,69 +47,53 @@ const FocusTrend = () => {
   const { currentMonth, previousMonth, twoMonthsAgo } = focusData;
 
   const currentMonthPercent = (currentMonth.total / currentMonth.expectedTotal) * 100;
-  
   const previousMonthPercent = (previousMonth.total / currentMonth.expectedTotal) * 100;
   const previousMonthAtCurrentDayPercent = (previousMonth.timeAtCurrentDay / currentMonth.expectedTotal) * 100;
-
   const twoMonthsAgoPercent = (twoMonthsAgo.total / currentMonth.expectedTotal) * 100;
   const twoMonthsAgoAtCurrentDayPercent = (twoMonthsAgo.timeAtCurrentDay / currentMonth.expectedTotal) * 100;
 
   return (
-    <div className="bg-black p-4 rounded-lg overflow-hidden h-full flex flex-col">
-      <h2 className="text-xl text-white mb-4">Focus Trend</h2>
-      <div className="space-y-4">
-        <div className="text-white">
-          <p>Current Month</p>
-          <div className="relative w-full h-4 bg-gray-700 rounded-lg">
-            <div
-              className="absolute top-0 left-0 h-4 bg-green-500 rounded-lg"
-              style={{ width: `${currentMonthPercent}%` }}
-            />
-            <p className="absolute top-1/2 transform -translate-y-1/2 text-left ml-2 text-xs text-gray-900">
-              So far: {Math.round(currentMonth.total)} min
-            </p>
-            <p className="absolute top-1/2 transform -translate-y-1/2 right-0 text-xs text-gray-400">
-              Expected: {Math.round(currentMonth.expectedTotal)} min
-            </p>
+    <div className="bg-transparent rounded-lg h-full flex flex-col" style={{ maxHeight: 'calc(100vh / 3)' }}>  {/* custom scrollbar needed?? */}
+      <h2 className="text-xl text-green-500 mb-2">Focus Trend</h2>
+        <div className="space-y-3">
+          <div className="text-white text-sm">
+            <p className="mb-1">This Month</p>
+            <div className="relative w-full h-4 bg-gray-700 rounded-lg">
+              <div className="absolute top-0 left-0 h-4 bg-green-500 rounded-lg" style={{ width: `${currentMonthPercent}%` }} />
+            </div>
+            <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <p>So far: {Math.round(currentMonth.total)} min</p>
+              <p>Expected: {Math.round(currentMonth.expectedTotal)} min</p>
+            </div>
           </div>
-        </div>
 
-        <div className="text-white">
-          <p>Previous Month</p>
-          <div className="relative w-full h-4 bg-gray-700 rounded-lg">
-            <div
-              className="absolute top-0 left-0 h-4 bg-gray-500 rounded-lg"
-              style={{ width: `${previousMonthPercent}%` }}
-            />
-            <div
-              className="absolute top-0 h-4 bg-green-400 rounded-full"
-              style={{ left: `${previousMonthAtCurrentDayPercent}%`, width: '4px' }}
-            />
-            <p className="absolute top-1/2 transform -translate-y-1/2 right-0 text-xs text-gray-400">
-              Total: {Math.round(previousMonth.total)} min
-            </p>
+          <div className="text-white text-sm">
+            <p className="mb-1">Previous Month</p>
+            <div className="relative w-full h-4 bg-gray-700 rounded-lg">
+              <div className="absolute top-0 left-0 h-4 bg-green-500 rounded-lg" style={{ width: `${previousMonthPercent}%` }} />
+              <div className="absolute top-0 h-4 bg-white rounded-full" style={{ left: `${previousMonthAtCurrentDayPercent}%`, width: '8px', height: '8px', transform: 'translateY(50%)' }} />
+            </div>
+            <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <p>By this day: {Math.round(previousMonth.timeAtCurrentDay)} min</p>
+              <p>Total: {Math.round(previousMonth.total)} min</p>
+            </div>
           </div>
-        </div>
 
-        <div className="text-white">
-          <p>Two Months Ago</p>
-          <div className="relative w-full h-4 bg-gray-700 rounded-lg">
-            <div
-              className="absolute top-0 left-0 h-4 bg-gray-500 rounded-lg"
-              style={{ width: `${twoMonthsAgoPercent}%` }}
-            />
-            <div
-              className="absolute top-0 h-4 bg-green-400 rounded-full"
-              style={{ left: `${twoMonthsAgoAtCurrentDayPercent}%`, width: '4px' }}
-            />
-            <p className="absolute top-1/2 transform -translate-y-1/2 right-0 text-xs text-gray-400">
-              Total: {Math.round(twoMonthsAgo.total)} min
-            </p>
+          <div className="text-white text-sm">
+            <p className="mb-1">Two Months Ago</p>
+            <div className="relative w-full h-4 bg-gray-700 rounded-lg">
+              <div className="absolute top-0 left-0 h-4 bg-gray-500 rounded-lg" style={{ width: `${twoMonthsAgoPercent}%` }} />
+              <div className="absolute top-0 h-4 bg-white rounded-full" style={{ left: `${twoMonthsAgoAtCurrentDayPercent}%`, width: '8px', height: '8px', transform: 'translateY(50%)' }} />
+            </div>
+            <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <p>By this day: {Math.round(twoMonthsAgo.timeAtCurrentDay)} min</p>
+              <p>Total: {Math.round(twoMonthsAgo.total)} min</p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+
 };
 
 export default FocusTrend;

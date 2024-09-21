@@ -1,34 +1,36 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model Profile {
-  id       String @id @default(uuid())
-  userId   String @unique
-  name     String
-  imageUrl String @db.Text
-  email    String @db.Text
-
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  TimerLog  TimerLog[]
+  id          String     @id @default(uuid())
+  userId      String     @unique
+  name        String
+  imageUrl    String
+  email       String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  streakStart DateTime?  @db.Timestamp(6)
+  streakLast  DateTime?  @db.Timestamp(6)
+  bestStreak  Int?       @default(0) @db.SmallInt
+  dailyGoal   Int        @default(180) @db.SmallInt
+  TimerLog    TimerLog[]
 }
 
 model TimerLog {
-  id        String  @id @default(uuid())
+  id        String   @id @default(uuid())
   profileId String
-  profile   Profile @relation(fields: [profileId], references: [id])
   startTime DateTime
-  endTime DateTime
-  duration Int
-  activity String
-
+  endTime   DateTime
+  duration  Int
+  activity  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  profile   Profile  @relation(fields: [profileId], references: [id])
 }
