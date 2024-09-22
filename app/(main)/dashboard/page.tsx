@@ -6,6 +6,7 @@ import Graph from "@/components/graph";
 import RecentSessions from "@/components/recent-sessions";
 import FocusTrend from "@/components/focused-time-comparison";
 import CurrentStreak from "@/components/current-streak";
+import BestHours from "@/components/best-hours";
 
 const DashboardBox = ({ children, className = "", style }: { children: ReactNode, className?: string, style?: React.CSSProperties }) => (
   <div className={`border border-gray-700 rounded-lg p-4 transition-all duration-300 hover:bg-gray-900 hover:border-green-500 ${className}`} style={style}>
@@ -36,7 +37,7 @@ const dashboard = () => {
             <RecentSessions/>
           </DashboardBox>
           <DashboardBox>
-            Most productive hours / most productive day of the week line graph?
+            <BestHours/>
           </DashboardBox>
           <DashboardBox>
             <CurrentStreak/>

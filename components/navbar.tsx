@@ -27,7 +27,7 @@ const Navbar = () => {
 
   return (
     <div>
-      <nav className={`flex fixed top-0 left-0 right-0 mb-20 items-center justify-between p-4 bg-transparent text-white
+      <nav className={`flex fixed z-10 top-0 left-0 right-0 mb-20 items-center justify-between p-4 bg-transparent text-white
         ${scrolled ? 'bg-purple-900/70 backdrop-blur-md shadow-lg' : 'bg-transparent'}
       "`}>
         <div className="flex items-center space-x-6">

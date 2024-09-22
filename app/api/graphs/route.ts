@@ -102,6 +102,7 @@ export async function GET(req: Request) {
           date,
           ...activityTimes,
           totalTime,
+          dailyGoal: profile.dailyGoal,
         });
       }
     }

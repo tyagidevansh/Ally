@@ -81,7 +81,7 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
       timerRef.current?.stop();
     };
   }, []);
-
+//if the timer runs out maybe just forcefully add 25 mins lmao rather than rely on stored time
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
     const seconds = time % 60;
@@ -384,7 +384,6 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
             </SelectContent>
           </Select>
         </div>
-
         <div className="mt-3 w-[35%]">
           <Select 
             value={activity} 

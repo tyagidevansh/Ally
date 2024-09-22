@@ -154,6 +154,57 @@ const Graph = () => {
     }
   }, [date]);
 
+  useEffect(() => {
+    if (!chartLoading) {
+      handleStreak();
+    }
+  }, [chartLoading]);
+
+  const handleStreak = async () => {
+    try {
+      const streakData = await fetch('/api/current-streak');
+      const streakDataJson = await streakData.json();
+
+      const updates: { streakStart?: number; streakLast?: number; bestStreak?: number } = {};
+
+      const now = new Date();
+      const localMidnight = new Date(now);
+      localMidnight.setHours(0, 0, 0, 0); 
+
+      const yesterdayMidnight = new Date(localMidnight);
+      yesterdayMidnight.setDate(localMidnight.getDate() - 1);
+
+      //check for streak changes at local midnight
+      if (now >= localMidnight && streakDataJson.yesterdayTime < dailyGoal) {
+        updates.streakStart = Date.now();
+        updates.streakLast = Date.now(); // start a new streak today
+
+      } else if (streakDataJson.todayTime >= dailyGoal) {
+        //today's goal has been met, so update `streakLast`
+        updates.streakLast = Date.now();
+
+        //if the previous day's goal was not met, start a new streak today
+        if (streakDataJson.yesterdayTime < dailyGoal) {
+          updates.streakStart = Date.now();
+        }
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await fetch('/api/current-streak', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updates),
+        });
+      }
+
+    } catch (error) {
+      console.error("Error handling streak update:", error);
+    }
+  };
+
+  
   const calculateDateRange = () => {
     let start: Date = new Date(), end: Date = new Date();
     setByMonth(false);
@@ -213,18 +264,18 @@ const Graph = () => {
       const response = await axios.get("/api/graphs", {
         params: {
           startTime: date.from.toISOString(),
-          endTime: new Date(date.to.setHours(23, 59, 59, 999)).toISOString(), // Adjust endTime here
+          endTime: new Date(date.to.setHours(23, 59, 59, 999)).toISOString(),
           byMonth: byMonth,
         },
       });
       setChartData(response.data.chartData);
+      setDailyGoal(response.data.chartData[0].dailyGoal);
     } catch (error) {
       console.error("Error fetching chart data:", error);
     } finally {
       setChartLoading(false);
     }
   };
-
 
   const handleGoalChange = async (adjustment: number) => {
     const newGoal = Math.max(30, Math.min(600, dailyGoal + adjustment));
