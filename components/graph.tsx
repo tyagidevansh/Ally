@@ -164,7 +164,7 @@ const Graph = () => {
     try {
       const streakData = await fetch('/api/current-streak');
       const streakDataJson = await streakData.json();
-
+      console.log(streakDataJson);
       const updates: { streakStart?: number; streakLast?: number; bestStreak?: number } = {};
 
       const now = new Date();
@@ -309,8 +309,8 @@ const Graph = () => {
     if (active && payload && payload.length) {;
       return (
         <div className="bg-gray-800 p-2 border border-gray-700 rounded">
-          <p className="text-white">{`Date: ${label}`}</p>
-          <p className="text-green-500">{`Total: ${formatTime(payload[0].payload.totalTime)}`}</p>
+          <p className="text-white text-xs">{`Date: ${label}`}</p>
+          <p className="text-green-500 text-xs">{`Total: ${formatTime(payload[0].payload.totalTime)}`}</p>
         </div>
       );
     }
@@ -470,7 +470,7 @@ const Graph = () => {
               data={chartData} // Ensure chartData matches the expected format
               margin={{ top: 20, right: 30, left: 30, bottom: 5 }}
             >
-              <CartesianGrid vertical={false} />
+              <CartesianGrid vertical={false} stroke = "#28272c"/>
               <XAxis dataKey="date" tickLine={false} tickMargin={5} axisLine={false} />
               <YAxis
                 tickFormatter={formatYAxis}

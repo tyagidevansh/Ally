@@ -53,7 +53,7 @@ const CurrentStreak = () => {
     } 
     else {
       const daysBetween = Math.floor((today - streakStart) / (1000 * 60 * 60 * 24));
-      currentStreak = daysBetween;
+      currentStreak = daysBetween + 1;
 
       if (todayTime >= dailyGoal) {
         updateStreakData({

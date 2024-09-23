@@ -7,6 +7,7 @@ import RecentSessions from "@/components/recent-sessions";
 import FocusTrend from "@/components/focused-time-comparison";
 import CurrentStreak from "@/components/current-streak";
 import BestHours from "@/components/best-hours";
+import ToDoList from "@/components/todo";
 
 const DashboardBox = ({ children, className = "", style }: { children: ReactNode, className?: string, style?: React.CSSProperties }) => (
   <div className={`border border-gray-700 rounded-lg p-4 transition-all duration-300 hover:bg-gray-900 hover:border-green-500 ${className}`} style={style}>
@@ -29,7 +30,7 @@ const dashboard = () => {
         </DashboardBox>
 
         <DashboardBox className="row-span-2">
-          To do list
+          <ToDoList/>
         </DashboardBox>
 
         <div className="grid grid-cols-3 gap-4 row-span-1">

@@ -4,6 +4,7 @@ import { UserButton } from '@clerk/nextjs';
 import { Timer, TimerOff, BarChart2, BookOpen, Dumbbell, PenTool } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTimerCommunication } from '@/lib/timer-communication';
+import { ModeToggle } from './mode-toggle';
 
 const Navbar = () => {
   const [isClient, setIsClient] = useState(false);
@@ -77,7 +78,7 @@ const Navbar = () => {
 
           )}
         
-         {/* <ModeToggle /> */}
+          {/* <ModeToggle /> */}
           <UserButton />
         </div>
       </nav>
