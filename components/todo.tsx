@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { PlusCircle, Trash2 } from "lucide-react";
 
 const ToDoList = () => {
   interface Todo {
@@ -11,10 +12,11 @@ const ToDoList = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [newTask, setNewTask] = useState("");
   const [priority, setPriority] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch the list of todos from the API
   useEffect(() => {
     const fetchTodos = async () => {
+      setLoading(true);
       try {
         const response = await fetch("/api/todos");
         const data = await response.json();
@@ -22,18 +24,25 @@ const ToDoList = () => {
       } catch (error) {
         console.error("Failed to fetch todos", error);
       }
+      setLoading(false);
     };
 
     fetchTodos();
   }, []);
 
-  // Handle new task submission
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!newTask.trim()) {
       return;
     }
+
+    const tempId = Date.now().toString(); 
+
+    const newTodo: Todo = { id: tempId, task: newTask, priority, isCompleted: false };
+    setTodos([newTodo, ...todos]);
+    setNewTask("");
+    // setPriority(0);
 
     try {
       const response = await fetch("/api/todos", {
@@ -44,35 +53,48 @@ const ToDoList = () => {
         body: JSON.stringify({ task: newTask, priority }),
       });
 
-      const newTodo = await response.json();
-      setTodos([newTodo, ...todos]);
-      setNewTask(""); // Clear input field
-      setPriority(0); // Reset priority
+      const savedTodo = await response.json();
+
+      setTodos((currentTodos) =>
+        currentTodos.map((todo) => (todo.id === tempId ? savedTodo : todo))
+      );
     } catch (error) {
       console.error("Failed to add task", error);
+
+      setTodos((currentTodos) => currentTodos.filter((todo) => todo.id !== tempId));
     }
   };
 
-  // Handle marking task as completed
   const handleMarkAsComplete = async (id: string, isCompleted: boolean) => {
+    setTodos((currentTodos) =>
+      currentTodos.map((todo) =>
+        todo.id === id ? { ...todo, isCompleted: !isCompleted } : todo
+      )
+    );
+
     try {
-      const response = await fetch("/api/todos", {
+      await fetch("/api/todos", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ id, isCompleted: !isCompleted }),
+        body: JSON.stringify({ id, isCompleted: !isCompleted }),  
       });
-
-      const updatedTodo = await response.json();
-      setTodos(todos.map(todo => todo.id === updatedTodo.id ? updatedTodo : todo));
     } catch (error) {
       console.error("Failed to update task", error);
+      
+      setTodos((currentTodos) =>
+        currentTodos.map((todo) =>
+          todo.id === id ? { ...todo, isCompleted } : todo 
+        )
+      );
     }
   };
 
-  // Handle deleting a task
   const handleDeleteTask = async (id: string) => {
+    const originalTodos = [...todos];
+    setTodos((currentTodos) => currentTodos.filter((todo) => todo.id !== id));
+
     try {
       await fetch("/api/todos", {
         method: "DELETE",
@@ -81,63 +103,101 @@ const ToDoList = () => {
         },
         body: JSON.stringify({ id }),
       });
-
-      setTodos(todos.filter(todo => todo.id !== id));
     } catch (error) {
       console.error("Failed to delete task", error);
+
+      setTodos(originalTodos);
     }
   };
 
-  return (
-    <div className="todo-list">
-      <h2 className="text-green-500 font-bold mb-4 text-xl">To-Do List</h2>
+  const cyclePriority = () => {
+    setPriority((prevPriority) => (prevPriority + 1) % 3);
+  };
 
-      <form onSubmit={handleAddTask} className="mb-4">
-        <input 
+  const getPriorityColor = () => {
+    switch (priority) {
+      case 1:
+        return "bg-yellow-400";
+      case 2:
+        return "bg-red-400";
+      default:
+        return "bg-green-400";
+    }
+  };
+
+  const getPriorityTooltip = () => {
+    switch (priority) {
+      case 1:
+        return "Medium Priority";
+      case 2:
+        return "High Priority";
+      default:
+        return "Low Priority";
+    }
+  };
+
+  if (loading) {
+    return <div>Loading...</div>
+  }
+
+  return (
+    <div className="h-full w-full custom-scrollbar overflow-y-auto" style={{ maxHeight: 'calc(150vh / 2)' }}>
+      <h2 className="text-green-500 font-bold mb-4 text-xl">To-Do</h2>
+
+      <form onSubmit={handleAddTask} className="mb-4 p-1 flex items-center space-x-2">
+        <input
           type="text"
           value={newTask}
           onChange={(e) => setNewTask(e.target.value)}
           placeholder="Enter new task"
-          className="border p-2 rounded w-full"
+          className="border p-2 rounded flex-grow"
         />
-        <div className="flex mt-2">
-          <input
-            type="number"
-            value={priority}
-            onChange={(e) => setPriority(parseInt(e.target.value))}
-            placeholder="Priority"
-            className="border p-2 rounded w-20"
-          />
-          <button type="submit" className="ml-4 bg-green-500 text-white p-2 rounded">
-            Add Task
-          </button>
-        </div>
+
+        <div
+          className={`w-6 h-6 rounded-full cursor-pointer ${getPriorityColor()}`}
+          onClick={cyclePriority}
+          title={getPriorityTooltip()}
+        ></div>
+
+        <button type="submit">
+          <PlusCircle className="text-green-500 w-8 h-8 cursor-pointer" />
+        </button>
       </form>
 
       <ul>
-        {todos.map(todo => (
-          <li key={todo.id} className="border p-2 mb-2 rounded flex justify-between items-center">
-            <span
-              style={{ textDecoration: todo.isCompleted ? "line-through" : "none" }}
+        {todos
+          .sort((a, b) => b.priority - a.priority || b.id.localeCompare(a.id)) // Sort by priority and order
+          .map((todo) => (
+            <li
+              key={todo.id}
+              className="border border-gray-500 p-2 mb-2 m-1 rounded-sm flex justify-between items-center hover:border-none hover:outline hover:outline-2 group"
+              style={{
+                outlineColor:
+                  todo.priority === 2 ? "red" : todo.priority === 1 ? "yellow" : "green",
+              }}
             >
-              {todo.task}
-            </span>
-            <div className="flex">
-              <button
-                className={`mr-2 ${todo.isCompleted ? 'bg-gray-500' : 'bg-green-500'} text-white p-2 rounded`}
-                onClick={() => handleMarkAsComplete(todo.id, todo.isCompleted)}
-              >
-                {todo.isCompleted ? "Undo" : "Complete"}
-              </button>
-              <button
-                className="bg-red-500 text-white p-2 rounded"
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={todo.isCompleted}
+                  onChange={() => handleMarkAsComplete(todo.id, todo.isCompleted)}
+                  className="mr-2"
+                />
+                <span
+                  style={{ textDecoration: todo.isCompleted ? "line-through" : "none" }}
+                >
+                  {todo.task}
+                </span>
+              </div>
+
+              <button 
                 onClick={() => handleDeleteTask(todo.id)}
+                className="opacity-0 group-hover:opacity-100 transition-opacity duration-50"  
               >
-                Delete
+                <Trash2 className="text-red-500 w-6 h-6 cursor-pointer" />
               </button>
-            </div>
-          </li>
-        ))}
+            </li>
+          ))}
       </ul>
     </div>
   );

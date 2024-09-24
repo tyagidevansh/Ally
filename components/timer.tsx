@@ -35,7 +35,6 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [studyTimeToday, setStudyTimeToday] = useState(0);
-  const [quote, setQuote] = useState("");
   const svgRef = useRef<SVGSVGElement | null>(null);
   const timerRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
@@ -93,7 +92,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
         timerRef.current = requestAnimationFrame(updateTimer);
       }
     }
-  }, []);
+  }, [activity]);
   
   const startTimer = useCallback(() => {
     startTimeRef.current = Date.now();
@@ -266,6 +265,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   };
 
   const confirmStop = () => {
+    console.log("3", activity);
     stopTimer();
     setShowAlert(false);
   };

@@ -8,9 +8,11 @@ const BestHours = () => {
   }
   
   const [data, setData] = useState<ChartData[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       const response = await fetch('/api/productive-hours');
       const responseJSON = await response.json();
 
@@ -19,6 +21,7 @@ const BestHours = () => {
         productivity: Math.round(responseJSON[hour] * 100)
       }));
       setData(chartData);
+      setLoading(false);
     };
 
     fetchData();
@@ -37,6 +40,10 @@ const BestHours = () => {
 
     return null;
   };
+
+  if (loading) {
+    return <div>Loading...</div>
+  }
 
   return (
     <div className="w-full h-full" style={{ maxHeight: 'calc(100vh / 3)' }}>

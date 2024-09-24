@@ -2,7 +2,6 @@ import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 
-// GET API to fetch all ToDos for the current profile
 export async function GET(req: Request) {
   try {
     const profile = await currentProfile();
@@ -16,10 +15,10 @@ export async function GET(req: Request) {
         profileId: profile.id,
       },
       orderBy: {
-        created_at: "desc",
+        createdAt: "desc",
       },
     });
-
+ 
     return NextResponse.json(todos);
   } catch (error) {
     console.error("[TODO GET ERROR]", error);
@@ -27,7 +26,6 @@ export async function GET(req: Request) {
   }
 }
 
-// POST API to add a new ToDo
 export async function POST(req: Request) {
   try {
     const profile = await currentProfile();
@@ -44,6 +42,7 @@ export async function POST(req: Request) {
 
     const newTodo = await db.toDo.create({
       data: {
+        id: crypto.randomUUID(),
         profileId: profile.id,
         task,
         priority: priority ?? 0,
@@ -58,7 +57,6 @@ export async function POST(req: Request) {
   }
 }
 
-// PUT API to update a ToDo (mark as completed or update task)
 export async function PUT(req: Request) {
   try {
     const profile = await currentProfile();
@@ -85,7 +83,6 @@ export async function PUT(req: Request) {
   }
 }
 
-// DELETE API to remove a ToDo
 export async function DELETE(req: Request) {
   try {
     const profile = await currentProfile();
