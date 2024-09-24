@@ -18,14 +18,18 @@ type Environment = {
   name: string; 
 };
 
+//Very important: handle the case of midnight when dealing with timers, how should the time reset?
+//also, maybe gibeb users the option to delay day starting, quite complex but handling midnight is necessary anyway might as well add that too
+//persist the state of activity between reloads
+
 const environments: Environment[] = [
-  {image: "https://media.giphy.com/media/3diu2dFNpV8AnozJ3V/giphy.gif", music: "rUxyKA_-grg", name: "Dusk"},
-  {image: "https://media.giphy.com/media/Basrh159dGwKY/giphy.gif", music: "S_MOd40zlYU", name: "Dark ambience"},
-  {image: "https://media.giphy.com/media/xWMPYx55WNhX136T0V/giphy.gif", music: "S_MOd40zlYU", name: "Sunrise"},
-  {image: "https://media.giphy.com/media/6GazCZqvW67VPN5SEd/giphy.gif", music: "S_MOd40zlYU", name: "Dawn"},
-  {image: "https://media.giphy.com/media/pVGsAWjzvXcZW4ZBTE/giphy.gif", music: "S_MOd40zlYU", name: "number 5"},
-  {image: "https://media.giphy.com/media/5e25aUTZPcI94uMZgv/giphy.gif", music: "S_MOd40zlYU", name: "Sunrise"},
-  {image: "https://media.giphy.com/media/5ngV4MB0UnYc2loCHT/giphy.gif", music: "S_MOd40zlYU", name: "Sunrise"},
+  {image: "https://media.giphy.com/media/3diu2dFNpV8AnozJ3V/giphy.gif", music: "S_MOd40zlYU", name: "Dusk"},
+  {image: "https://media.giphy.com/media/Basrh159dGwKY/giphy.gif", music: "Saj2lY-zPl4", name: "Dark ambience"},
+  {image: "https://media.giphy.com/media/xWMPYx55WNhX136T0V/giphy.gif", music: "5jaT_8hy3Vg", name: "Sunrise"},
+  {image: "https://media.giphy.com/media/6GazCZqvW67VPN5SEd/giphy.gif", music: "2jhs18qEtnE", name: "Dawn"},
+  {image: "https://media.giphy.com/media/pVGsAWjzvXcZW4ZBTE/giphy.gif", music: "d2VdpHxmbPE", name: "Rain"},
+  {image: "https://media.giphy.com/media/5e25aUTZPcI94uMZgv/giphy.gif", music: "4xDzrJKXOOY", name: "Punk"},
+  {image: "https://media.giphy.com/media/5ngV4MB0UnYc2loCHT/giphy.gif", music: "UO-8am5GWoI", name: "Snowfall"},
 
 ];
 

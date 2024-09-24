@@ -35,7 +35,7 @@ const Navbar = () => {
         <Link href="/" className="hover:opacity-80 transition-opacity">
           <div className="relative w-16 h-10">
             <Image
-              src="/logo-light.png"
+              src="/logo-dark.png"
               alt="Ally Logo"
               layout="fill"
               className="block"

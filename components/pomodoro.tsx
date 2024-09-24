@@ -57,7 +57,7 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
   const { broadcastTimerUpdate } = useTimerCommunication();
 
   useEffect(() => {
-    timerRef.current = new Timer(25, 5, 20);
+    timerRef.current = new Timer(25, 1, 20);
 
     timerRef.current.subscribe((currentTime: any) => {
       setTimerState({
@@ -80,7 +80,7 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
     return () => {
       timerRef.current?.stop();
     };
-  }, []);
+  }, [activity]);
 //if the timer runs out maybe just forcefully add 25 mins lmao rather than rely on stored time
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);

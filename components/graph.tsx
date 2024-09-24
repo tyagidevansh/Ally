@@ -11,8 +11,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Calendar } from "./ui/calendar";
 
-//make daily goal local storage or something
-
 import {
   Popover,
   PopoverContent,
@@ -47,11 +45,11 @@ const chartConfig = {
   },
   Reading: {
     label: "Reading",
-    color: "#3b82f6",
+    color: "#fb7185",
   },
   Coding: {
     label: "Coding",
-    color: "#fb7185",
+    color: "#3b82f6",
   }, 
   Meditation: {
     label: "Meditation",

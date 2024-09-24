@@ -170,7 +170,7 @@ const ToDoList = () => {
           .map((todo) => (
             <li
               key={todo.id}
-              className="border border-gray-500 p-2 mb-2 m-1 rounded-sm flex justify-between items-center hover:border-none hover:outline hover:outline-2 group"
+              className="border border-gray-500 p-2 mb-2 m-1 rounded-md flex justify-between items-center hover:border-none hover:outline hover:outline-2 group"
               style={{
                 outlineColor:
                   todo.priority === 2 ? "red" : todo.priority === 1 ? "yellow" : "green",
