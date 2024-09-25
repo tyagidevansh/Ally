@@ -19,8 +19,12 @@ type Environment = {
 };
 
 //Very important: handle the case of midnight when dealing with timers, how should the time reset?
-//also, maybe gibeb users the option to delay day starting, quite complex but handling midnight is necessary anyway might as well add that too
+//also, maybe give users the option to delay day starting, quite complex but handling midnight is necessary anyway might as well add that too
 //persist the state of activity between reloads
+//maybe a study room with video calling?
+//notifications for pomodoro and stopwatch
+//is there a max time for stopwatch?
+//timer icon should take you to timer page? give a dropdown somehow?
 
 const environments: Environment[] = [
   {image: "https://media.giphy.com/media/3diu2dFNpV8AnozJ3V/giphy.gif", music: "S_MOd40zlYU", name: "Dusk"},

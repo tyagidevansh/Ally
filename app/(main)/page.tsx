@@ -11,7 +11,7 @@ const Home = () => {
   const { isSignedIn } = useAuth();
   const router = useRouter();
 
-  const handleClick = () => {
+  const handleClickDash = () => {
     if (isSignedIn) {
       router.push('/dashboard');
     } else {
@@ -19,8 +19,16 @@ const Home = () => {
     }
   }
 
+  const handleClickFocus = ()  => {
+    if (isSignedIn) {
+      router.push('/focus');
+    } else {
+      router.push('/sign-in');
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-green-900 text-white">
+    <div className="min-h-screen max-w-[100%] overflow-x-hidden bg-gradient-to-br from-purple-900 via-blue-900 to-green-800 text-white">
       <Navbar/>
       <div className="container mx-auto px-4 pt-12 pb-4">
         <div className="text-center mb-16">
@@ -31,7 +39,7 @@ const Home = () => {
           <p className="text-2xl mb-8">
             Use Ally to track your life's stats and level up!
           </p>
-          <Button onClick={handleClick} className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition duration-300">
+          <Button onClick={handleClickDash} className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition duration-300">
             {isSignedIn ? "Go to Dashboard" : "Join Ally"}
             <ArrowRight className="ml-2 h-5 w-5"/>
           </Button>
@@ -99,7 +107,7 @@ const Home = () => {
         <div>
           <hr className="border-0 h-1 bg-gradient-to-r from-green-400 via-blue-500 to-purple-500 rounded-full my-10"/>
           
-          <div className="bg-white/10 rounded-lg p-12 mx-auto max-w-3xl mb-16">
+          <div className="bg-white/10 rounded-lg p-12 mx-auto max-w-3xl mb-8">
             <h2 className="text-3xl mb-5 font-bold text-center">How Can Ally Help You?</h2>
 
             <h3 className="text-xl font-bold mb-2">Turning Focus Into a Habit</h3>
@@ -146,7 +154,7 @@ const Home = () => {
         </div>
 
         <div className="text-center">
-          <Button onClick={handleClick} className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-full transition duration-300">
+          <Button onClick={handleClickFocus} className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-6 rounded-full transition duration-300">
             {isSignedIn? "Start Focusing" : "Start Your Journey Now"} <ArrowRight className="ml-2 h-5 w-5"/>
           </Button>
         </div>
