@@ -137,7 +137,7 @@ const Home = () => {
               your involvement will help this project grow. Feel free to head over to GitHub to contribute or simply give this project a star!
             </p>
 
-          <a href="https://github.com/tyagidevansh/Ally" target="_blank" className="inline-flex items-center border-2 mt-4 border-white text-white font-bold py-3 px-6 rounded-full transition duration-300 hover:bg-white hover:text-purple-900">
+          <a href="https://github.com/tyagidevansh/Ally" target="_blank" className="inline-flex items-center border-2 mt-4 border-white text-white font-bold py-3 px-6 rounded-full transition duration-300 hover:bg-white hover:text-purple-900" rel="noreferrer">
             <Github/>	&nbsp; Head over to GitHub <ArrowUpRight/>
           </a>
 
