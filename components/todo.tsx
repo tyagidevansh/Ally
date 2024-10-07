@@ -150,7 +150,7 @@ const ToDoList = () => {
           value={newTask}
           onChange={(e) => setNewTask(e.target.value)}
           placeholder="Enter new task"
-          className="border p-2 rounded flex-grow"
+          className="border p-2 rounded flex-grow bg-gray-800 outline-none"
         />
 
         <div

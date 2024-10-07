@@ -47,12 +47,13 @@ export async function GET(req: Request) {
     const profile = await currentProfile();
 
     if (!profile) {
-      return new NextResponse("Unauthorized", { status : 401});
+      return new NextResponse("Unauthorized", { status: 401 });
     }
 
     const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+    const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const endOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
 
     const logs = await db.timerLog.findMany({
       where: {
@@ -71,7 +72,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ totalMicroseconds });
   } catch (error) {
-    console.error("Error fetching daily logs ",error);
-    return new NextResponse("Internal server error" , {status: 500});
+    console.error("Error fetching daily logs ", error);
+    return new NextResponse("Internal server error", { status: 500 });
   }
 }

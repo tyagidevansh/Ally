@@ -13,7 +13,9 @@ const BestHours = () => {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const response = await fetch('/api/productive-hours');
+      const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      //const userTimeZone = 'Europe/London';
+      const response = await fetch('/api/productive-hours?timezone=' + userTimeZone);
       const responseJSON = await response.json();
 
       const chartData = Object.keys(responseJSON).map((hour, index) => ({

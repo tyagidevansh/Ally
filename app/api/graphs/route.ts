@@ -34,8 +34,8 @@ export async function GET(req: Request) {
       where: {
         profileId: profile.id,
         startTime: {
-          gte: startTime, 
-          lt: new Date(endTime.setDate(endTime.getDate())),
+          gte: startTime,
+          lt: new Date(Date.UTC(endTime.getUTCFullYear(), endTime.getUTCMonth(), endTime.getUTCDate() + 1)),
         },
       },
     });
@@ -46,21 +46,21 @@ export async function GET(req: Request) {
       const monthMap: { [key: string]: { [key: string]: number } } = {};
 
       logs.forEach((log) => {
-        const month = log.startTime.toLocaleString('default', { month: "short", year: "numeric" });
-        
+        const month = log.startTime.toLocaleString('default', { month: "short", year: "numeric", timeZone: "UTC" });
+
         if (!monthMap[month]) {
           monthMap[month] = {};
           activities.forEach((activity) => {
             monthMap[month][activity] = 0;
           });
         }
-        
+
         monthMap[month][log.activity] += log.duration;
       });
 
-      for (let dt = new Date(startTime); dt <= endTime; dt.setMonth(dt.getMonth() + 1)) {
-        const month = dt.toLocaleString('default', { month: "short", year: "numeric" });
-        
+      for (let dt = new Date(startTime); dt <= endTime; dt.setUTCMonth(dt.getUTCMonth() + 1)) {
+        const month = dt.toLocaleString('default', { month: "short", year: "numeric", timeZone: "UTC" });
+
         const activityTimes: { [key: string]: number } = {};
         let totalTime = 0;
 
@@ -77,10 +77,10 @@ export async function GET(req: Request) {
         });
       }
     } else {
-      const dateMap: { [key: string]: {[key: string] : number} } = {};
+      const dateMap: { [key: string]: { [key: string]: number } } = {};
 
       logs.forEach((log) => {
-        const date = log.startTime.toDateString().slice(4, 10); // MMM DD
+        const date = log.startTime.toUTCString().slice(5, 11); // MMM DD in UTC
         if (!dateMap[date]) {
           dateMap[date] = {};
           activities.forEach((activity) => {
@@ -90,8 +90,8 @@ export async function GET(req: Request) {
         dateMap[date][log.activity] += log.duration;
       });
 
-      for (let dt = new Date(startTime); dt <= endTime; dt.setDate(dt.getDate() + 1)) {
-        const date = dt.toDateString().slice(4, 10);
+      for (let dt = new Date(startTime); dt <= endTime; dt.setUTCDate(dt.getUTCDate() + 1)) {
+        const date = dt.toUTCString().slice(5, 11); // MMM DD in UTC
         const activityTimes: { [key: string]: number } = {};
         let totalTime = 0;
 
@@ -121,24 +121,24 @@ export async function POST(req: Request) {
     const profile = await currentProfile();
 
     if (!profile) {
-      return new NextResponse("Unauthorized", { status: 401});
+      return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const {goal} : {goal : number} = await req.json();
+    const { goal }: { goal: number } = await req.json();
 
     if (!goal) {
-      return new NextResponse("Empty request", { status: 400});
+      return new NextResponse("Empty request", { status: 400 });
     }
 
+    // Update the profile with the new goal
     await db.profile.update({
-      where: { id : profile.id },
+      where: { id: profile.id },
       data: {
         dailyGoal: goal,
       },
     });
 
-    return new NextResponse(JSON.stringify({ message: "Goal updated successfully" }), { status: 200 })
-
+    return new NextResponse(JSON.stringify({ message: "Goal updated successfully" }), { status: 200 });
   } catch (error) {
     console.log("daily goal post error ", error);
     return new NextResponse("Internal Server Error", { status: 500 });

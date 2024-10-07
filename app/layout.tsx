@@ -5,6 +5,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "next-themes";
 import { cn } from "@/lib/utils";
 import Head from "next/head";
+import { Analytics } from '@vercel/analytics/react';
 
 const font = Merriweather({ weight: "300", subsets: ["latin"] });
 
@@ -38,6 +39,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             {children}
+            <Analytics />
           </ThemeProvider>
         </body>
       </html>

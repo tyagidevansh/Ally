@@ -25,6 +25,8 @@ type Environment = {
 //notifications for pomodoro and stopwatch
 //is there a max time for stopwatch?
 //timer icon should take you to timer page? give a dropdown somehow?
+//bruh timezone diff on vercel
+//disable navigation via navbar when timer running
 
 const environments: Environment[] = [
   {image: "https://media.giphy.com/media/3diu2dFNpV8AnozJ3V/giphy.gif", music: "S_MOd40zlYU", name: "Dusk"},

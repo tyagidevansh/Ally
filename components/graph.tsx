@@ -214,13 +214,13 @@ const Graph = () => {
         break;
       case "week":
         const now = new Date();
-        const dayOfWeek = now.getDay();
+        const dayOfWeek = now.getUTCDay();
         start = new Date(now);
-        start.setDate(now.getDate() - dayOfWeek); // start of the week
-        start.setHours(0, 0, 0, 0);
+        start.setUTCDate(now.getUTCDate() - dayOfWeek); // start of the week
+        start.setUTCHours(0, 0, 0, 0);
         end = new Date(start);
-        end.setDate(start.getDate() + 6); //end of the week
-        end.setHours(23, 59, 59, 999);
+        end.setUTCDate(start.getUTCDate() + 6); //end of the week
+        end.setUTCHours(23, 59, 59, 999);
         break;
       case "30":
         end = new Date();
@@ -228,8 +228,8 @@ const Graph = () => {
         break;
       case "month":
         const currentMonth = new Date();
-        start = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1); // start of the month
-        end = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0); // end of the month
+        start = new Date(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth(), 1); // start of the month
+        end = new Date(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth() + 1, 0); // end of the month
         break;
       case "year":
         const currentYear = new Date().getFullYear();
@@ -267,6 +267,7 @@ const Graph = () => {
         },
       });
       setChartData(response.data.chartData);
+      console.log(chartData);
       setDailyGoal(response.data.chartData[0].dailyGoal);
     } catch (error) {
       console.error("Error fetching chart data:", error);
@@ -300,6 +301,7 @@ const Graph = () => {
   };
 
   const maxTime = Math.max(...chartData.map(data => data.totalTime));
+  const totalTime = chartData.reduce((acc, data) => acc + data.totalTime, 0);
 
   const ticks = generateTicks(maxTime);
 
@@ -380,12 +382,10 @@ const Graph = () => {
           />
         </PopoverContent>
       </Popover>
-
-      <span className="border p-2 ml-5 rounded-md text-sm">Daily Goal : {minutesToStr(dailyGoal)}</span>
       
       <Drawer>
         <DrawerTrigger asChild>
-          <Button variant = "outline" className="text-green-500">Change</Button>
+          <Button variant = "outline" className="text-green-400 ml-5">Daily Goal : {minutesToStr(dailyGoal)}</Button>
         </DrawerTrigger>
         <DrawerContent className="bg-black">
           <div className="mx-auto w-full max-w-sm">
@@ -452,6 +452,9 @@ const Graph = () => {
           </div>
         </DrawerContent>
       </Drawer>
+
+      {/* <span className="border p-2 ml-5 rounded-md text-sm">Range Total: {totalTime}</span> */}
+
     </div>
  
       <div>
@@ -465,7 +468,7 @@ const Graph = () => {
         ) : (
           <ChartContainer config={chartConfig} className="h-full w-full">
             <BarChart
-              data={chartData} // Ensure chartData matches the expected format
+              data={chartData} 
               margin={{ top: 20, right: 30, left: 30, bottom: 5 }}
             >
               <CartesianGrid vertical={false} stroke = "#28272c"/>
