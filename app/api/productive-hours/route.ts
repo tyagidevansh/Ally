@@ -1,34 +1,30 @@
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { fromZonedTime, toZonedTime } from "date-fns-tz";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
+    const url = new URL(req.url);
+    const userTimeZone = url.searchParams.get("timezone"); // Get IANA timezone string from query params
+
+    if (!userTimeZone) {
+      return new NextResponse("Time zone is required", { status: 400 });
+    }
+
     const profile = await currentProfile();
-    
+
     if (!profile) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const url = new URL(req.url);
-    const userTimeZone = url.searchParams.get("timezone") || "UTC";
+    const currentDate = new Date();
+    const startDate = new Date(currentDate);
+    startDate.setDate(currentDate.getDate() - 15); // Fetch logs from the last 15 days
+    const endDate = new Date(currentDate);
 
-    const currentDateUtc = new Date().toISOString(); 
-    const currentDateInUserTimeZone = toZonedTime(currentDateUtc, userTimeZone); // convert to user's timezone
-
-    console.log("Requested User Time Zone:", userTimeZone);
-    console.log("Current Date in UTC:", currentDateUtc);
-    console.log("Converted User Time Zone Date:", currentDateInUserTimeZone);
-
-    const startDateInUserTimeZone = new Date(currentDateInUserTimeZone);
-    startDateInUserTimeZone.setDate(currentDateInUserTimeZone.getDate() - 15);
-
-    const startDate = toZonedTime(startDateInUserTimeZone, userTimeZone);
-    const endDate = toZonedTime(currentDateInUserTimeZone, userTimeZone);
-
+    // Fetch logs stored in UTC
     const allLogs = await db.timerLog.findMany({
       where: {
         profileId: profile.id,
@@ -43,17 +39,18 @@ export async function GET(req: Request) {
     const hourCounts = Array(24).fill(0);
 
     allLogs.forEach(log => {
-      const logDateInUtc = new Date(log.startTime);
-      const logDateInUserTimeZone = fromZonedTime(logDateInUtc, userTimeZone); 
-      const hour = logDateInUserTimeZone.getHours();
-      //is this only counting productivity as when you start the timer?
-      productivity[hour] += log.duration; 
-      hourCounts[hour] += 1; 
+      const utcStartTime = new Date(log.startTime); 
+
+      const localTime = new Date(utcStartTime.toLocaleString("en-US", { timeZone: userTimeZone }));
+      const localHour = localTime.getHours(); 
+
+      productivity[localHour] += log.duration;
+      hourCounts[localHour] += 1;
     });
 
-    // normalize the productivity data
+
     const maxProductivity = Math.max(...productivity);
-    const normalizedProductivity = productivity.map((value, index) => 
+    const normalizedProductivity = productivity.map((value, index) =>
       hourCounts[index] > 0 ? value / (maxProductivity || 1) : 0
     );
 

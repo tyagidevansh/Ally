@@ -14,7 +14,6 @@ const BestHours = () => {
     const fetchData = async () => {
       setLoading(true);
       const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      //const userTimeZone = 'Europe/London';
       const response = await fetch('/api/productive-hours?timezone=' + userTimeZone);
       const responseJSON = await response.json();
 

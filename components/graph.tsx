@@ -385,7 +385,7 @@ const Graph = () => {
       
       <Drawer>
         <DrawerTrigger asChild>
-          <Button variant = "outline" className="text-green-400 ml-5">Daily Goal : {minutesToStr(dailyGoal)}</Button>
+          <Button variant = "outline" className="text-green-400 ml-3">Daily Goal : {minutesToStr(dailyGoal)}</Button>
         </DrawerTrigger>
         <DrawerContent className="bg-black">
           <div className="mx-auto w-full max-w-sm">
@@ -453,7 +453,7 @@ const Graph = () => {
         </DrawerContent>
       </Drawer>
 
-      {/* <span className="border p-2 ml-5 rounded-md text-sm">Range Total: {totalTime}</span> */}
+      {<span className="border p-2 ml-3 rounded-md text-sm">Range Total: {Math.round(totalTime / 60000)} min</span>}
 
     </div>
  

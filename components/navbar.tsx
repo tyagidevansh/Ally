@@ -32,7 +32,7 @@ const Navbar = () => {
         ${scrolled ? 'bg-purple-900/70 backdrop-blur-md shadow-lg' : 'bg-transparent'}
       "`}>
         <div className="flex items-center space-x-6">
-        <Link href="/" className="hover:opacity-80 transition-opacity">
+        <Link href="/" className="hover:opacity-80 transition-opacity" target={runningCount > 0 ? "_blank" : "_self"} rel={runningCount > 0 ? "noopener noreferrer" : undefined}>
           <div className="relative w-16 h-10">
             <Image
               src="/logo-dark.png"
@@ -43,19 +43,19 @@ const Navbar = () => {
           </div>
         </Link>
         
-        <Link href="/dashboard" className="flex items-center space-x-1 hover:text-green-400 transition-colors">
+        <Link href="/dashboard" className="flex items-center space-x-1 hover:text-green-400 transition-colors" target={runningCount > 0 ? "_blank" : "_self"} rel={runningCount > 0 ? "noopener noreferrer" : undefined}>
           <BarChart2 size={18} />
           <span>Dashboard</span>
         </Link>
-        <Link href="/focus" className="flex items-center space-x-1 hover:text-green-400 transition-colors">
+        <Link href="/focus" className="flex items-center space-x-1 hover:text-green-400 transition-colors" target={runningCount > 0 ? "_blank" : "_self"} rel={runningCount > 0 ? "noopener noreferrer" : undefined}>
           <BookOpen size={18} />
           <span>Focus</span>
         </Link>
-        <Link href="/workout" className="flex items-center space-x-1 hover:text-green-400 transition-colors">
+        <Link href="/workout" className="flex items-center space-x-1 hover:text-green-400 transition-colors" target={runningCount > 0 ? "_blank" : "_self"} rel={runningCount > 0 ? "noopener noreferrer" : undefined}>
           <Dumbbell size={18} />
           <span>Workout</span>
         </Link>
-        <Link href="/journal" className="flex items-center space-x-1 hover:text-green-400 transition-colors">
+        <Link href="/journal" className="flex items-center space-x-1 hover:text-green-400 transition-colors" target={runningCount > 0 ? "_blank" : "_self"} rel={runningCount > 0 ? "noopener noreferrer" : undefined}>
           <PenTool size={18} />
           <span>Journal</span>
         </Link>

@@ -121,7 +121,7 @@ const ToDoList = () => {
       case 2:
         return "bg-red-400";
       default:
-        return "bg-green-400";
+        return "bg-green-500";
     }
   };
 
@@ -173,7 +173,7 @@ const ToDoList = () => {
               className="border border-gray-500 p-2 mb-2 m-1 rounded-md flex justify-between items-center hover:border-none hover:outline hover:outline-2 group"
               style={{
                 outlineColor:
-                  todo.priority === 2 ? "red" : todo.priority === 1 ? "yellow" : "green",
+                  todo.priority === 2 ? "red" : todo.priority === 1 ? "yellow" : "roronoazoro",
               }}
             >
               <div className="flex items-center">
