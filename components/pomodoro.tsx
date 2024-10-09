@@ -21,6 +21,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import useTimerStore from '@/store/timerStore';
 import { useTimerCommunication } from '@/lib/timer-communication';
 
@@ -55,6 +61,7 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
   const pauseTimeRef = useRef<number | null>(null);
   const { isRunning, setIsRunning, runningCount, setRunningCount } = useTimerStore();
   const { broadcastTimerUpdate } = useTimerCommunication();
+  const [localTime, setLocalTime] = useState("");
 
   useEffect(() => {
     timerRef.current = new Timer(25, 1, 20);
@@ -120,7 +127,7 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
 
   const handleStop = async () => {
     setShowAlert(false);
-    setIsRunningLocal(false);
+    
     const currentRunningCount = useTimerStore.getState().runningCount;
     setRunningCount(Math.max(0, currentRunningCount - 1)); 
     broadcastTimerUpdate();
@@ -128,6 +135,7 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
     if (timerState?.status === "work") {
       await logWorkTime();
     }
+    setIsRunningLocal(false);
     resetTimer();
     const elemTime = document.getElementById('time-display');
     if (elemTime) {
@@ -256,6 +264,16 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
   : 100;
   const circumference = 2 * Math.PI * 118;
   const offset = circumference - (percentage / 100) * circumference;
+
+  const getLocalTime = () => {
+    const now = Date.now();
+    const utcOffsetMinutes = new Date(now).getTimezoneOffset() / -60;
+    setLocalTime("(Local time: UTC+" + utcOffsetMinutes.toString() + ")");
+  }
+
+  useEffect(() => {
+    getLocalTime();
+  }, []);
 
   return (
     <div className='relative h-full flex flex-col items-center select-none'>
@@ -403,9 +421,18 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
           </Select>
         </div>
 
-        <div className="text-zinc-100 mt-12 text-center text-lg">
-          Focused {formatTimeForDaily(studyTimeToday)} today
-        </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger className="mt-12">
+              <div className="text-zinc-100 text-center text-lg">
+                Focused {formatTimeForDaily(studyTimeToday)} today
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="bg-white/20 backdrop-blur-md">
+              <p >Days start at UTC {localTime}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );

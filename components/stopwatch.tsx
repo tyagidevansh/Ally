@@ -21,6 +21,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useTimerCommunication } from "@/lib/timer-communication";
 
 interface StopwatchProps {
@@ -41,7 +47,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
   const { isRunning, setIsRunning, runningCount, setRunningCount } = useTimerStore();
   const { broadcastTimerUpdate } = useTimerCommunication();
   const [isRunningLocal, setIsRunningLocal] = useState(false);
-
+  const [localTime, setLocalTime] = useState("");
 
   const formatTime = (time: number) => {
     const hours = Math.floor(time / 3600000);
@@ -104,7 +110,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
     const currentRunningCount = useTimerStore.getState().runningCount;
     setRunningCount(Math.max(0, currentRunningCount - 1)); 
 
-    setIsRunningLocal(false);
+    
     broadcastTimerUpdate();
 
     if (intervalRef.current !== null) {
@@ -120,8 +126,9 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
       });
     } catch (error) {
       console.error("Error saving timer log:", error);
+      alert("An error occured and your study log could not be stored!");
     }
-
+    setIsRunningLocal(false);
     setElapsedTime(0);
     startTimeRef.current = null;
     document.title = "Ally";
@@ -209,6 +216,16 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
     console.log(activity);
   }, [activity]);
 
+  const getLocalTime = () => {
+    const now = Date.now();
+    const utcOffsetMinutes = new Date(now).getTimezoneOffset() / -60;
+    setLocalTime("(Local time: UTC+" + utcOffsetMinutes.toString() + ")");
+  }
+
+  useEffect(() => {
+    getLocalTime();
+  }, []);
+
   return (
     <div className="relative h-full flex flex-col items-center select-none">
       <div className="absolute top-[10%] flex flex-col items-center w-full">
@@ -228,7 +245,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                     Stop
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="bg-zinc-200 dark:bg-zinc-800 text-black dark:text-white">
+                <AlertDialogContent className="text-white bg-white/30 backdrop:blur-md">
                   <AlertDialogHeader>
                     <AlertDialogTitle>Are you sure you want to stop the timer?</AlertDialogTitle>
                     <AlertDialogDescription>
@@ -288,9 +305,19 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                 </Select>
               </div>
               
-              <div className="text-zinc-100 mt-12 text-center text-lg">
-                Focused {formatTimeForDaily(studyTimeToday)} today
-              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger className="mt-12">
+                    <div className="text-zinc-100 text-center text-lg">
+                      Focused {formatTimeForDaily(studyTimeToday)} today
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-white/20 backdrop-blur-md">
+                    <p >Days start at UTC {localTime}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
             </>
           )}
         </div>

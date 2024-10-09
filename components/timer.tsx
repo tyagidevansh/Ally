@@ -21,6 +21,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
 import { useNotifications } from "@/hooks/use-notification";
 import { useTimerCommunication } from "@/lib/timer-communication";
 
@@ -43,6 +50,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   const { isRunning, setIsRunning, runningCount, setRunningCount } = useTimerStore();
   const { broadcastTimerUpdate } = useTimerCommunication();
   const [isRunningLocal, setIsRunningLocal] = useState(false);
+  const [localTime, setLocalTime] = useState("");
 
   const router = useRouter();
   const { sendNotification } = useNotifications();
@@ -125,8 +133,6 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     const currentRunningCount = useTimerStore.getState().runningCount;
     setRunningCount(Math.max(0, currentRunningCount - 1)) 
 
-
-    setIsRunningLocal(false);
     broadcastTimerUpdate();
     const endTime = Date.now();
     const duration = endTime - (startTimeRef.current ?? endTime);
@@ -141,7 +147,8 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     } catch (error) {
       console.error("Error saving timer log: ", error);
     }
-    
+
+    setIsRunningLocal(false);
     startTimeRef.current = null;
     setTimeLeft(selectedTimeRef.current);
     setTotalTime(10800);
@@ -290,6 +297,16 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     fetchTodayStudyTime();
   }, [isRunningLocal]);
 
+  const getLocalTime = () => {
+    const now = Date.now();
+    const utcOffsetMinutes = new Date(now).getTimezoneOffset() / -60;
+    setLocalTime("(Local time: UTC+" + utcOffsetMinutes.toString() + ")");
+  }
+
+  useEffect(() => {
+    getLocalTime();
+  }, []);
+
   return (
   <div className="relative h-full flex flex-col items-center select-none">
     <div className="absolute top-[10%] flex flex-col items-center w-full">
@@ -398,9 +415,19 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
           </Select>
         </div>
 
-        <div className="text-zinc-100 mt-12 text-center text-lg">
-          Focused {formatTimeForDaily(studyTimeToday)} today
-        </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger className="mt-12">
+              <div className="text-zinc-100 text-center text-lg">
+                Focused {formatTimeForDaily(studyTimeToday)} today
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="bg-white/20 backdrop-blur-md">
+              <p >Days start at UTC {localTime}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
       </div>
     </div>
   </div>
