@@ -20,6 +20,7 @@ model Profile {
   streakLast  DateTime?  @db.Timestamp(6)
   bestStreak  Int?       @default(0) @db.SmallInt
   dailyGoal   Int        @default(180) @db.SmallInt
+  Journal     Journal[]
   TimerLog    TimerLog[]
   ToDo        ToDo[]
 }
@@ -44,4 +45,15 @@ model ToDo {
   id          String    @id @db.Uuid
   createdAt   DateTime? @default(now()) @db.Timestamp(6)
   Profile     Profile   @relation(fields: [profileId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model Journal {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  profileId  String
+  entry      String
+  mood       Int?     @default(3) @db.SmallInt
+  nutrition  Int?     @default(3) @db.SmallInt
+  sleep      Int?     @default(3) @db.SmallInt
+  Profile    Profile  @relation(fields: [profileId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
