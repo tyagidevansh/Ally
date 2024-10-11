@@ -6,10 +6,11 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { AiOutlinePlus } from 'react-icons/ai';
 import { IoMdClose } from 'react-icons/io';
+import { FaBed, FaCarrot } from 'react-icons/fa';
+import Navbar from '@/components/navbar';
 
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
-import 'react-quill/dist/quill.snow.css'; 
-import Navbar from '@/components/navbar';
+import 'react-quill/dist/quill.snow.css';
 
 interface JournalEntry {
   id: string;
@@ -34,23 +35,81 @@ const JournalPage: React.FC = () => {
   const [sleep, setSleep] = useState<number>(3);
   const [nutrition, setNutrition] = useState<number>(3);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [isFetching, setIsFetching] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [skip, setSkip] = useState<number>(0);
-  const [hasMoreEntries, setHasMoreEntries] = useState<boolean>(true); 
+  const [hasMoreEntries, setHasMoreEntries] = useState<boolean>(true);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  const moodEmojis = ['😃', '😄', '😌', '😔', '😖'];
+
+  // Helper function to get color based on the rating
+  const getColor = (rating: number) => {
+    if (rating <= 2) return 'text-red-500';
+    if (rating === 3) return 'text-yellow-500';
+    return 'text-green-500';
+  };
+
+  // Helper function to format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  };
+
+  // Group journal entries by date
+  const groupEntriesByDate = () => {
+    const groupedEntries: { [key: string]: JournalEntry[] } = {};
+    journalEntries.forEach(entry => {
+      const formattedDate = formatDate(entry.created_at);
+      if (!groupedEntries[formattedDate]) {
+        groupedEntries[formattedDate] = [];
+      }
+      groupedEntries[formattedDate].push(entry);
+    });
+    return groupedEntries;
+  };
+
+  // Function to handle cycling through emoji ratings
+  const handleEmojiClick = (setter: React.Dispatch<React.SetStateAction<number>>, currentValue: number) => {
+    const newValue = currentValue === 5 ? 1 : currentValue + 1;
+    setter(newValue);
+  };
+
+  // Fetch journal entries (infinite scrolling)
+  const fetchJournals = async (skip = 0) => {
+    if (!hasMoreEntries) return;
+
+    try {
+      const response = await axios.get(`/api/journal?skip=${skip}&take=20`);
+      const newEntries = response.data;
+
+      // Prevent duplicates: Only add entries if they don't already exist
+      const filteredEntries = newEntries.filter(
+        (newEntry: JournalEntry) => !journalEntries.some(entry => entry.id === newEntry.id)
+      );
+
+      if (filteredEntries.length === 0) {
+        setHasMoreEntries(false);
+      } else {
+        setJournalEntries(prev => [...prev, ...filteredEntries]);
+        setSkip(prev => prev + 20);
+      }
+    } catch (error) {
+      console.error('Error fetching journals:', error);
+    }
+  };
+
+  // Initial fetch
   useEffect(() => {
     fetchJournals();
   }, []);
 
+  // Infinite scrolling setup
   useEffect(() => {
-    if (!bottomRef.current || !hasMoreEntries || isFetching) return;
+    if (!bottomRef.current || !hasMoreEntries) return;
 
     const observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && !isFetching) {
-        setTimeout(() => {
-          fetchJournals(skip);
-        }, 500);  // delay of 500ms to prevent multiple rapid calls
+      if (entries[0].isIntersecting) {
+        fetchJournals(skip);
       }
     }, { threshold: 1 });
 
@@ -59,37 +118,11 @@ const JournalPage: React.FC = () => {
     return () => {
       if (bottomRef.current) observer.unobserve(bottomRef.current);
     };
-  }, [skip, isFetching, hasMoreEntries]);
+  }, [skip, hasMoreEntries]);
 
-
-  const fetchJournals = async (skip = 0) => {
-    if (!hasMoreEntries || isFetching) return; 
-
-    try {
-      setIsFetching(true);
-      const response = await axios.get(`/api/journal?skip=${skip}&take=20`);
-      console.log(response);
-      
-      if (response.data.length === 0) {
-        setHasMoreEntries(false); 
-      } else {
-        setJournalEntries(prev => {
-          const newEntries = response.data.filter(
-            (newEntry: JournalEntry) => !prev.some(entry => entry.id === newEntry.id)
-          );
-          return [...prev, ...newEntries];
-        });
-        setSkip(prev => prev + 20); 
-      }
-    } catch (error) {
-      console.error('Error fetching journals:', error);
-    } finally {
-      setIsFetching(false);
-    }
-  };
-
-
+  // Post new journal entry
   const handlePostJournal = async () => {
+    setIsSaving(true);
     try {
       const newJournal: NewJournalEntry = {
         entry: newEntry,
@@ -98,7 +131,9 @@ const JournalPage: React.FC = () => {
         nutrition,
       };
       const response = await axios.post<JournalEntry>('/api/journal', newJournal);
-      setJournalEntries([response.data, ...journalEntries]);
+
+      // Update state and prevent duplicate entries
+      setJournalEntries(prev => [response.data, ...prev.filter(entry => entry.id !== response.data.id)]);
       setNewEntry('');
       setMood(3);
       setSleep(3);
@@ -106,112 +141,134 @@ const JournalPage: React.FC = () => {
       setIsModalOpen(false);
     } catch (error) {
       console.error('Error posting journal:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
+  // Modal for adding a new journal entry
   const renderModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <motion.div 
+      <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-gray-800 p-8 rounded-lg shadow-lg w-96 relative"
+        className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-3xl relative flex flex-col"
+        style={{ maxHeight: '80vh' }}
       >
-        <IoMdClose 
-          className="absolute top-2 right-2 text-gray-600 cursor-pointer"
+        <IoMdClose
+          className="absolute top-2 right-2 text-gray-600 dark:text-gray-300 cursor-pointer"
           onClick={() => setIsModalOpen(false)}
           size={24}
         />
-        <h2 className="text-2xl mb-4 font-semibold">New Journal Entry</h2>
-        <ReactQuill 
-          value={newEntry} 
-          onChange={setNewEntry} 
-          placeholder="Write your thoughts here..." 
-          className="mb-4"
+        <h2 className="text-2xl mb-4 font-semibold text-gray-800 dark:text-gray-300">New Journal Entry</h2>
+
+        <ReactQuill
+          value={newEntry}
+          onChange={setNewEntry}
+          placeholder="Write your thoughts here..."
+          className="mb-4 flex-1 overflow-y-auto"
+          style={{ maxHeight: '50vh' }}
+          modules={{
+            toolbar: [
+              ['bold', 'italic', 'underline'],
+              [{ 'header': '1' }, { 'header': '2' }],
+              [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+              [{ 'indent': '-1' }, { 'indent': '+1' }],
+              [{ 'align': [] }],
+            ]
+          }}
         />
-        <div className="mb-4">
-          <label className="block text-sm mb-2">Mood</label>
-          <input 
-            type="range" 
-            min="1" 
-            max="5" 
-            value={mood} 
-            onChange={e => setMood(Number(e.target.value))} 
-            className="w-full" 
-          />
+
+        <div className="flex justify-around items-center mb-4 space-x-6">
+          <div className="flex items-center space-x-2 cursor-pointer"
+               onClick={() => handleEmojiClick(setMood, mood)}
+               title="Rate your mood"
+          >
+            <span className="text-3xl">{moodEmojis[mood - 1]}</span>
+            <span className={`text-lg ${getColor(mood)}`}>{mood}</span>
+          </div>
+          <div className="flex items-center space-x-2 cursor-pointer"
+               onClick={() => handleEmojiClick(setSleep, sleep)}
+               title="Rate your sleep"
+          >
+            <FaBed size={28} className="text-blue-500"/>
+            <span className={`text-lg ${getColor(sleep)}`}>{sleep}</span>
+          </div>
+          <div className="flex items-center space-x-2 cursor-pointer"
+               onClick={() => handleEmojiClick(setNutrition, nutrition)}
+               title="Rate your nutrition"
+          >
+            <FaCarrot size={28} className="text-orange-400"/>
+            <span className={`text-lg ${getColor(nutrition)}`}>{nutrition}</span>
+          </div>
         </div>
-        <div className="mb-4">
-          <label className="block text-sm mb-2">Sleep</label>
-          <input 
-            type="range" 
-            min="1" 
-            max="5" 
-            value={sleep} 
-            onChange={e => setSleep(Number(e.target.value))} 
-            className="w-full" 
-          />
-        </div>
-        <div className="mb-6">
-          <label className="block text-sm mb-2">Nutrition</label>
-          <input 
-            type="range" 
-            min="1" 
-            max="5" 
-            value={nutrition} 
-            onChange={e => setNutrition(Number(e.target.value))} 
-            className="w-full" 
-          />
-        </div>
-        <button 
-          onClick={handlePostJournal} 
-          className="bg-blue-500 text-white w-full py-2 rounded-md"
+
+        <button
+          onClick={handlePostJournal}
+          className="bg-green-500 text-white w-full py-2 rounded-md hover:bg-green-600 transition duration-300"
         >
-          Save Journal
+          {isSaving ? 'Saving...' : 'Save Journal'}
         </button>
       </motion.div>
     </div>
   );
 
+  // The journal page rendering
+  const groupedEntries = groupEntriesByDate();
+
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-900">
-      <Navbar/>
-      <div className="flex-1 mt-12 p-6 overflow-y-auto relative">
-        {/* <h1 className="text-3xl font-bold text-white mb-8">Journal</h1> */}
-        {journalEntries.map((entry, index) => (
-          <motion.div
-            key={index}
-            className="p-6 bg-gray-800 rounded-lg shadow-lg mb-8 border-gray-700"
-            whileHover={{ scale: 1.02 }}
-            transition={{ type: 'spring', stiffness: 100 }}
-          >
-            <h2 className="text-xl text-white mb-4">{new Date(entry.created_at).toLocaleDateString()}</h2>
-            <div 
-              dangerouslySetInnerHTML={{ __html: entry.entry }} 
-              className="text-sm text-gray-300 mb-4"
-            ></div>
-            <div className="flex space-x-4 text-gray-400">
-              <span>Mood: {entry.mood}</span>
-              <span>Sleep: {entry.sleep}</span>
-              <span>Nutrition: {entry.nutrition}</span>
-            </div>
-          </motion.div>
+    <div className="flex h-screen flex-col bg-gray-50 dark:bg-gray-900">
+      <Navbar />
+      <div className="overflow-auto p-6">
+        {Object.entries(groupedEntries).map(([date, entries]) => (
+          <div key={date}>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4">{date}</h2>
+            {entries.map((entry, index) => (
+              <motion.div
+                key={entry.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ scale: 1.02 }}
+                className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-md mb-4 border-l-4 border-green-500"
+              >
+                <div dangerouslySetInnerHTML={{ __html: entry.entry }} className="prose prose-lg dark:prose-dark" />
+                <div className="mt-4 flex justify-between items-center text-gray-600 dark:text-gray-400">
+                  <div>
+                    <span className="mr-2">Mood:</span>
+                    <span className={`text-xl ${getColor(entry.mood)}`}>{moodEmojis[entry.mood - 1]}</span>
+                    <span className={`ml-2 text-lg ${getColor(entry.mood)}`}>{entry.mood}</span>
+                  </div>
+                  <div>
+                    <span className="mr-2">Sleep:</span>
+                    <FaBed size={20} className={`inline ${getColor(entry.sleep)}`} />
+                    <span className={`ml-2 text-lg ${getColor(entry.sleep)}`}>{entry.sleep}</span>
+                  </div>
+                  <div>
+                    <span className="mr-2">Nutrition:</span>
+                    <FaCarrot size={20} className={`inline ${getColor(entry.nutrition)}`} />
+                    <span className={`ml-2 text-lg ${getColor(entry.nutrition)}`}>{entry.nutrition}</span>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         ))}
-        
-        {isFetching && <div className="text-center text-white mt-4">Loading more entries...</div>}
-        <div ref={bottomRef} className="h-10"></div>
+
+        <div ref={bottomRef} />
       </div>
 
-      <motion.button
-        className="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700"
-        whileHover={{ scale: 1.1 }}
+      <button
         onClick={() => setIsModalOpen(true)}
+        className="fixed bottom-8 right-8 bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition duration-300"
       >
-        <AiOutlinePlus size={28} />
-      </motion.button>
+        <AiOutlinePlus size={32} />
+      </button>
 
       {isModalOpen && renderModal()}
     </div>
   );
 };
 
-export default Journal;
+export default JournalPage;

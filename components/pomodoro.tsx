@@ -120,7 +120,11 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
 
   const handleStop = async () => {
     setShowAlert(false);
-    setIsRunningLocal(false);
+    
+    const elemStatus = document.getElementById('status-display');
+    if (elemStatus) {
+      elemStatus.textContent = 'Saving...';
+    }
     const currentRunningCount = useTimerStore.getState().runningCount;
     setRunningCount(Math.max(0, currentRunningCount - 1)); 
     broadcastTimerUpdate();
@@ -129,12 +133,12 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
       await logWorkTime();
     }
     resetTimer();
+    setIsRunningLocal(false);
     const elemTime = document.getElementById('time-display');
     if (elemTime) {
       elemTime.textContent = '25:00';
     }
 
-    const elemStatus = document.getElementById('status-display');
     if (elemStatus) {
       elemStatus.textContent = 'Focus';
     }

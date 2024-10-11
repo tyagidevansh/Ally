@@ -125,8 +125,11 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     const currentRunningCount = useTimerStore.getState().runningCount;
     setRunningCount(Math.max(0, currentRunningCount - 1)) 
 
+    const button = document.getElementById("stopButton");
+    if (button) {
+      button.innerText = "Saving...";
+    }
 
-    setIsRunningLocal(false);
     broadcastTimerUpdate();
     const endTime = Date.now();
     const duration = endTime - (startTimeRef.current ?? endTime);
@@ -142,6 +145,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
       console.error("Error saving timer log: ", error);
     }
     
+    setIsRunningLocal(false);
     startTimeRef.current = null;
     setTimeLeft(selectedTimeRef.current);
     setTotalTime(10800);
@@ -335,7 +339,8 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
                 <Button
                   onClick={handleStop}
                   className="bg-red-600 w-full text-white hover:bg-red-500"
-                >
+                  id = "stopButton"
+                  >
                   Give up
                 </Button>
               </AlertDialogTrigger>

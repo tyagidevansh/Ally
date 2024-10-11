@@ -98,13 +98,16 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
 
   const stopTimer = useCallback(async () => {
   if (startTimeRef.current !== null) {
+    const button = document.getElementById("stopButton");
+    if (button) {
+      button.innerText = "Saving...";
+    }
     const endTime = Date.now();
     const duration = endTime - startTimeRef.current;
 
     const currentRunningCount = useTimerStore.getState().runningCount;
     setRunningCount(Math.max(0, currentRunningCount - 1)); 
 
-    setIsRunningLocal(false);
     broadcastTimerUpdate();
 
     if (intervalRef.current !== null) {
@@ -122,6 +125,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
       console.error("Error saving timer log:", error);
     }
 
+    setIsRunningLocal(false);
     setElapsedTime(0);
     startTimeRef.current = null;
     document.title = "Ally";
@@ -224,11 +228,12 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                   <Button
                     onClick={handleStop}
                     className="bg-red-600 w-full text-white hover:bg-red-500"
+                    id = "stopButton"
                   >
                     Stop
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="bg-zinc-200 dark:bg-zinc-800 text-black dark:text-white">
+                <AlertDialogContent className="text-white bg-white/30 backdrop:blur-md">
                   <AlertDialogHeader>
                     <AlertDialogTitle>Are you sure you want to stop the timer?</AlertDialogTitle>
                     <AlertDialogDescription>
