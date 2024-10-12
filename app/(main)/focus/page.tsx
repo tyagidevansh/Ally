@@ -111,7 +111,7 @@ const Home = () => {
       <div className="absolute inset-0 bg-black opacity-50 z-10"></div>
 
       <div className="relative z-20 flex flex-col h-full">
-        <Navbar />
+        <Navbar showToggle = {false}/>
         
         <div className="flex-1 grid grid-cols-10 gap-6 p-4">
           <div className="col-span-3 row-auto ml-10 mt-16 bg-white/10 rounded-xl backdrop-blur-md">

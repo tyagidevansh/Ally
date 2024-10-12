@@ -29,7 +29,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen max-w-[100%] overflow-x-hidden bg-gradient-to-br from-purple-900 via-blue-900 to-green-800 text-white">
-      <Navbar/>
+      <Navbar showToggle = {false}/>
       <div className="container mx-auto px-4 pt-12 pb-4">
         <div className="text-center mb-16">
           <h1 className="text-6xl mt-16 font-bold mb-6">

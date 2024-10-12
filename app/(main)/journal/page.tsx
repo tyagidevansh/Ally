@@ -6,7 +6,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { AiOutlinePlus } from 'react-icons/ai';
 import { IoMdClose } from 'react-icons/io';
-import { FaBed, FaCarrot } from 'react-icons/fa';
+import { FaBed, FaCarrot, FaSmile } from 'react-icons/fa';
 import Navbar from '@/components/navbar';
 
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
@@ -39,23 +39,19 @@ const JournalPage: React.FC = () => {
   const [skip, setSkip] = useState<number>(0);
   const [hasMoreEntries, setHasMoreEntries] = useState<boolean>(true);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const journalEntriesRef = useRef(new Set<string>());
 
-  const moodEmojis = ['😃', '😄', '😌', '😔', '😖'];
-
-  // Helper function to get color based on the rating
   const getColor = (rating: number) => {
     if (rating <= 2) return 'text-red-500';
     if (rating === 3) return 'text-yellow-500';
     return 'text-green-500';
   };
 
-  // Helper function to format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-  // Group journal entries by date
   const groupEntriesByDate = () => {
     const groupedEntries: { [key: string]: JournalEntry[] } = {};
     journalEntries.forEach(entry => {
@@ -68,13 +64,11 @@ const JournalPage: React.FC = () => {
     return groupedEntries;
   };
 
-  // Function to handle cycling through emoji ratings
   const handleEmojiClick = (setter: React.Dispatch<React.SetStateAction<number>>, currentValue: number) => {
     const newValue = currentValue === 5 ? 1 : currentValue + 1;
     setter(newValue);
   };
 
-  // Fetch journal entries (infinite scrolling)
   const fetchJournals = async (skip = 0) => {
     if (!hasMoreEntries) return;
 
@@ -82,15 +76,17 @@ const JournalPage: React.FC = () => {
       const response = await axios.get(`/api/journal?skip=${skip}&take=20`);
       const newEntries = response.data;
 
-      // Prevent duplicates: Only add entries if they don't already exist
-      const filteredEntries = newEntries.filter(
-        (newEntry: JournalEntry) => !journalEntries.some(entry => entry.id === newEntry.id)
+      const uniqueEntries = newEntries.filter(
+        (newEntry: JournalEntry) => !journalEntriesRef.current.has(newEntry.id)
       );
 
-      if (filteredEntries.length === 0) {
+      if (uniqueEntries.length === 0) {
         setHasMoreEntries(false);
       } else {
-        setJournalEntries(prev => [...prev, ...filteredEntries]);
+        setJournalEntries(prev => [...prev, ...uniqueEntries]);
+
+        uniqueEntries.forEach((entry: { id: string; }) => journalEntriesRef.current.add(entry.id));
+
         setSkip(prev => prev + 20);
       }
     } catch (error) {
@@ -98,18 +94,23 @@ const JournalPage: React.FC = () => {
     }
   };
 
-  // Initial fetch
   useEffect(() => {
     fetchJournals();
   }, []);
 
-  // Infinite scrolling setup
   useEffect(() => {
     if (!bottomRef.current || !hasMoreEntries) return;
 
+    let fetching = false; 
+
     const observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        fetchJournals(skip);
+      if (entries[0].isIntersecting && !fetching) {
+        fetching = true;  
+        setTimeout(() => {
+          fetchJournals(skip).finally(() => {
+            fetching = false;  
+          });
+        }, 500);
       }
     }, { threshold: 1 });
 
@@ -120,7 +121,7 @@ const JournalPage: React.FC = () => {
     };
   }, [skip, hasMoreEntries]);
 
-  // Post new journal entry
+
   const handlePostJournal = async () => {
     setIsSaving(true);
     try {
@@ -132,7 +133,6 @@ const JournalPage: React.FC = () => {
       };
       const response = await axios.post<JournalEntry>('/api/journal', newJournal);
 
-      // Update state and prevent duplicate entries
       setJournalEntries(prev => [response.data, ...prev.filter(entry => entry.id !== response.data.id)]);
       setNewEntry('');
       setMood(3);
@@ -146,7 +146,6 @@ const JournalPage: React.FC = () => {
     }
   };
 
-  // Modal for adding a new journal entry
   const renderModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
       <motion.div
@@ -185,7 +184,7 @@ const JournalPage: React.FC = () => {
                onClick={() => handleEmojiClick(setMood, mood)}
                title="Rate your mood"
           >
-            <span className="text-3xl">{moodEmojis[mood - 1]}</span>
+            <span className="text-3xl"></span>
             <span className={`text-lg ${getColor(mood)}`}>{mood}</span>
           </div>
           <div className="flex items-center space-x-2 cursor-pointer"
@@ -214,12 +213,11 @@ const JournalPage: React.FC = () => {
     </div>
   );
 
-  // The journal page rendering
   const groupedEntries = groupEntriesByDate();
 
   return (
     <div className="flex h-screen flex-col bg-gray-50 dark:bg-gray-900">
-      <Navbar />
+      <Navbar showToggle = {true} />
       <div className="overflow-auto p-6">
         {Object.entries(groupedEntries).map(([date, entries]) => (
           <div key={date}>
@@ -237,7 +235,7 @@ const JournalPage: React.FC = () => {
                 <div className="mt-4 flex justify-between items-center text-gray-600 dark:text-gray-400">
                   <div>
                     <span className="mr-2">Mood:</span>
-                    <span className={`text-xl ${getColor(entry.mood)}`}>{moodEmojis[entry.mood - 1]}</span>
+                    <span className={`text-xl ${getColor(entry.mood)}`}></span>
                     <span className={`ml-2 text-lg ${getColor(entry.mood)}`}>{entry.mood}</span>
                   </div>
                   <div>
