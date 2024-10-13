@@ -39,7 +39,7 @@ const Navbar = ({ showToggle }: NavbarProps) => {
     <div>
       <nav
         className={`flex fixed z-10 top-0 left-0 right-0 mb-20 items-center justify-between p-4 text-gray-900 dark:text-white ${
-          scrolled ? 'bg-white/70 dark:bg-purple-900/70 backdrop-blur-md shadow-lg' : 'bg-transparent'
+          scrolled ? 'bg-white/10 backdrop-blur-md shadow-lg' : 'bg-transparent'
         }`}
       >
         <div className="flex items-center space-x-6">

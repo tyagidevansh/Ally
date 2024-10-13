@@ -130,6 +130,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
     startTimeRef.current = null;
     document.title = "Ally";
     router.refresh();
+    fetchTodayStudyTime();
   }
 }, [router, activity, setRunningCount, broadcastTimerUpdate]);
 
