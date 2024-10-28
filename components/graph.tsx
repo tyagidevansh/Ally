@@ -166,14 +166,15 @@ const Graph = () => {
       const updates: { streakStart?: number; streakLast?: number; bestStreak?: number } = {};
 
       const now = new Date();
-      const localMidnight = new Date(now);
-      localMidnight.setHours(0, 0, 0, 0); 
+      //const localMidnight = new Date(now);
+      //localMidnight.setHours(0, 0, 0, 0); 
+      const utcMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
-      const yesterdayMidnight = new Date(localMidnight);
-      yesterdayMidnight.setDate(localMidnight.getDate() - 1);
+      const yesterdayMidnight = new Date(utcMidnight);
+      yesterdayMidnight.setDate(utcMidnight.getDate() - 1);
 
       //check for streak changes at local midnight
-      if (now >= localMidnight && streakDataJson.yesterdayTime < dailyGoal) {
+      if (now >= utcMidnight && streakDataJson.yesterdayTime < dailyGoal) {
         updates.streakStart = Date.now();
         updates.streakLast = Date.now(); // start a new streak today
 
@@ -188,6 +189,7 @@ const Graph = () => {
       }
 
       if (Object.keys(updates).length > 0) {
+        console.log("updating")
         await fetch('/api/current-streak', {
           method: 'POST',
           headers: {

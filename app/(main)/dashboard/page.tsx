@@ -17,7 +17,7 @@ const DashboardBox = ({ children, className = "", style }: { children: ReactNode
 
 const dashboard = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white">
+    <div className="w-full min-h-fit bg-gradient-to-b from-black to-gray-900 text-white min-w-fit">
       <Navbar showToggle = {false}/>
       <div className="container mx-auto p-4 grid grid-cols-[2fr,1fr] grid-rows-3 gap-4 mt-10">
         

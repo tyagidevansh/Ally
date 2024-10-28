@@ -78,15 +78,6 @@ const Navbar = ({ showToggle }: NavbarProps) => {
             <span>Focus</span>
           </Link>
           <Link
-            href="/workout"
-            className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors"
-            target={runningCount > 0 ? '_blank' : '_self'}
-            rel={runningCount > 0 ? 'noopener noreferrer' : undefined}
-          >
-            <Dumbbell size={18} />
-            <span>Workout</span>
-          </Link>
-          <Link
             href="/journal"
             className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors"
             target={runningCount > 0 ? '_blank' : '_self'}
