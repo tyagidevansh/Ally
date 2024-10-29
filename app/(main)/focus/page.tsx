@@ -18,19 +18,14 @@ type Environment = {
   name: string; 
 };
 
-//Very important: handle the case of midnight when dealing with timers, how should the time reset?
-//also, maybe give users the option to delay day starting, quite complex but handling midnight is necessary anyway might as well add that too
 //persist the state of activity between reloads
-//maybe a study room with video calling?
 //notifications for pomodoro and stopwatch
 //is there a max time for stopwatch?
 //timer icon should take you to timer page? give a dropdown somehow?
-//bruh timezone diff on vercel
-//disable navigation via navbar when timer running
 
 const environments: Environment[] = [
   {image: "https://media.giphy.com/media/3diu2dFNpV8AnozJ3V/giphy.gif", music: "S_MOd40zlYU", name: "Dusk"},
-  {image: "https://media.giphy.com/media/Basrh159dGwKY/giphy.gif", music: "Saj2lY-zPl4", name: "Dark ambience"},
+  {image: "https://media.giphy.com/media/Basrh159dGwKY/giphy.gif", music: "Saj2lY-zPl4", name: "Nightfall"},
   {image: "https://media.giphy.com/media/xWMPYx55WNhX136T0V/giphy.gif", music: "5jaT_8hy3Vg", name: "Sunrise"},
   {image: "https://media.giphy.com/media/6GazCZqvW67VPN5SEd/giphy.gif", music: "2jhs18qEtnE", name: "Dawn"},
   {image: "https://media.giphy.com/media/pVGsAWjzvXcZW4ZBTE/giphy.gif", music: "d2VdpHxmbPE", name: "Rain"},
@@ -91,11 +86,11 @@ const Home = () => {
   return (
     <div className="h-screen flex flex-col relative overflow-hidden">
       <div className="absolute inset-0 z-0">
-        <Slider ref= {sliderRef} {...settings}>
+        <Slider ref={sliderRef} {...settings}>
           {environments.map((env, index) => (
             <div key={index} className="h-screen">
-              <div 
-                className="absolute inset-0" 
+              <div
+                className="absolute inset-0"
                 style={{
                   backgroundImage: `url('${env.image}')`,
                   backgroundSize: 'cover',
@@ -107,31 +102,43 @@ const Home = () => {
           ))}
         </Slider>
       </div>
-
       <div className="absolute inset-0 bg-black opacity-50 z-10"></div>
-
       <div className="relative z-20 flex flex-col h-full">
-        <Navbar showToggle = {false}/>
+        <Navbar showToggle={false}/>
         
-        <div className="flex-1 grid grid-cols-10 gap-6 p-4">
-          <div className="col-span-3 row-auto ml-10 mt-16 bg-white/10 rounded-xl backdrop-blur-md">
+        <div className="flex-1 md:grid md:grid-cols-10 flex flex-col p-4">
+          <div className="md:col-span-3 row-auto md:ml-10 mt-16 md:bg-white/10 rounded-xl md:backdrop-blur-md justify-center">
             {renderComponent()}
           </div>
-          <div className="col-span-2 order-2 ml-10 mt-10 p-4">
-            <MusicPlayer videoId={currentEnv.music} title = {currentEnv.name}/>
-            <div className="flex flex-row justify-end m-2 ">
-              <Button onClick={() => sliderRef.current.slickPrev()} className="bg-white/10 backdrop-blur-md text-white hover:bg-white/30">
-                <ChevronLeft/>
-              </Button>
-              <Button onClick={() => sliderRef.current.slickNext()} className="ml-2 bg-white/10 backdrop-blur-md text-white hover:bg-white/30">
-                <ChevronRight/>
-              </Button>
-            </div>
 
-          </div>
-          <div className="col-span-5 mt-auto ml-36 p-4">
+          <div className="hidden md:block col-span-5 mt-auto ml-36 p-4">
             <p className="text-white text-center text-xl">"{quote}"</p>
           </div>
+          
+          <div className="fixed bottom-0 left-0 right-0 p-4 z-30 md:static md:top-32 md:mt-10 md:left-10 md:right-auto md:bg-transparent">
+            <div className="flex flex-row items-center justify-center gap-4 md:justify-start">
+              <Button 
+                onClick={() => sliderRef.current.slickPrev()} 
+                className="bg-white/10 backdrop-blur-md text-white hover:bg-white/30 h-12 w-12 flex items-center justify-center"
+              >
+                <ChevronLeft />
+              </Button>
+              
+              <div className="w-24 min-w-24">
+                <MusicPlayer videoId={currentEnv.music} title={currentEnv.name} />
+              </div>
+                       
+              <Button 
+                onClick={() => sliderRef.current.slickNext()} 
+                className="bg-white/10 backdrop-blur-md text-white hover:bg-white/30 h-12 w-12 flex items-center justify-center"
+              >
+                <ChevronRight />
+              </Button>
+            </div>
+          </div>
+
+
+          
         </div>
       </div>
     </div>
