@@ -295,7 +295,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   }, [isRunningLocal]);
 
   return (
-  <div className="relative h-full flex flex-col items-center select-none">
+  <div className="relative h-full flex flex-col items-center select-none text-white">
     <div className="absolute top-[10%] flex flex-col items-center w-full">
       <div
         className="relative w-60 h-60 mb-8"
@@ -338,22 +338,22 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
               <AlertDialogTrigger asChild>
                 <Button
                   onClick={handleStop}
-                  className="bg-red-600 w-full text-white hover:bg-red-500"
+                  className="bg-red-600 w-full hover:bg-red-500 text-white"
                   id = "stopButton"
                   >
                   Give up
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="text-white bg-white/30 backdrop:blur-md">
+              <AlertDialogContent className="bg-white/30 backdrop:blur-md text-white border-none">
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you sure you want to stop the timer?</AlertDialogTitle>
-                  <AlertDialogDescription>
+                  <AlertDialogDescription className="text-gray-900">
                     Keep pushing and reach your goal!
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel onClick={() => setShowAlert(false)}>Keep going</AlertDialogCancel>
-                  <AlertDialogAction onClick={confirmStop}>Give up</AlertDialogAction>
+                  <AlertDialogCancel className = "bg-gray-900 text-white hover:bg-gray-900 hover:text-white border-none" onClick={() => setShowAlert(false)}>Keep going</AlertDialogCancel>
+                  <AlertDialogAction className = "bg-white text-gray-900 hover:bg-white hover:text-gray-900 border-none" onClick={confirmStop}>Give up</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
@@ -370,11 +370,11 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
         <div className="mt-3 w-[35%]">
           <Select onValueChange={onChangeTimer} disabled={isRunningLocal}>
             <SelectTrigger
-              className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}
+              className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed text-gray-900 dark:text-gray-500' : 'bg-white/30 backdrop-blur-md'} border-none`}
             >
               <SelectValue placeholder="Timer" />
             </SelectTrigger>
-            <SelectContent className="bg-white/20 backdrop-blur-md">
+            <SelectContent className="bg-white/20 text-white backdrop-blur-md">
               <SelectItem value="Stopwatch">Stopwatch</SelectItem>
               <SelectItem value="Timer">Timer</SelectItem>
               <SelectItem value="Pomodoro">Pomodoro</SelectItem>
@@ -389,11 +389,11 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
             disabled={isRunningLocal}
           >
             <SelectTrigger
-              className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}
+              className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed text-gray-900 dark:text-gray-500' : 'bg-white/30 backdrop-blur-md'} border-none`}
             >
               <SelectValue placeholder="Stopwatch" />
             </SelectTrigger>
-            <SelectContent className="bg-white/20 backdrop-blur-md">
+            <SelectContent className="bg-white/20 backdrop-blur-md text-white">
               <SelectItem value="Study">Study</SelectItem>
               <SelectItem value="Reading">Reading</SelectItem>
               <SelectItem value="Coding">Coding</SelectItem>

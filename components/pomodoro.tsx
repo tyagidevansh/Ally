@@ -262,7 +262,7 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
   const offset = circumference - (percentage / 100) * circumference;
 
   return (
-    <div className='relative h-full flex flex-col items-center select-none'>
+    <div className='relative h-full flex flex-col items-center select-none text-white'>
       <div className='absolute top-[10%] flex flex-col items-center w-full'>
         <div className='relative w-60 h-60 mb-8'>
           <svg
@@ -345,16 +345,16 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
                         <Square size={32} />
                       </motion.button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-white/30 backdrop:blur-md">
+                    <AlertDialogContent className="bg-white/30 backdrop:blur-md text-white border-none">
                       <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure you want to end this session?</AlertDialogTitle>
-                        <AlertDialogDescription>
+                        <AlertDialogDescription className="text-gray-900">
                           End the session if you are done studying.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setShowAlert(false)}>Keep going</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleStop}>End session</AlertDialogAction>
+                        <AlertDialogCancel className = "bg-gray-900 text-white hover:bg-gray-900 hover:text-white border-none" onClick={() => setShowAlert(false)}>Keep going</AlertDialogCancel>
+                        <AlertDialogAction className = "bg-white text-gray-900 hover:bg-white hover:text-gray-900 border-none" onClick={handleStop}>End session</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
@@ -378,10 +378,10 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
             onValueChange={onChangeTimer}
             disabled={isRunningLocal}
           >
-            <SelectTrigger className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
+            <SelectTrigger className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed text-gray-900 dark:text-gray-500' : 'bg-white/30 backdrop-blur-md'} border-none`}>
               <SelectValue placeholder="Pomodoro" />
             </SelectTrigger>
-            <SelectContent className="bg-white/20 backdrop-blur-md">
+            <SelectContent className="bg-white/20 backdrop-blur-md text-white">
               <SelectItem value="Stopwatch">Stopwatch</SelectItem>
               <SelectItem value="Timer">Timer</SelectItem>
               <SelectItem value="Pomodoro">Pomodoro</SelectItem>
@@ -394,10 +394,10 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
             onValueChange={(value) => setActivity(value)}
             disabled={isRunningLocal}
           >
-            <SelectTrigger className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
+            <SelectTrigger className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed text-gray-900 dark:text-gray-500' : 'bg-white/30 backdrop-blur-md'} border-none`}>
               <SelectValue placeholder="Study" />
             </SelectTrigger>
-            <SelectContent className="bg-white/20 backdrop-blur-md">
+            <SelectContent className="bg-white/20 backdrop-blur-md text-white">
               <SelectItem value="Study">Study</SelectItem>
               <SelectItem value="Reading">Reading</SelectItem>
               <SelectItem value="Coding">Coding</SelectItem>

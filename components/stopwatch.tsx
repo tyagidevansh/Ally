@@ -215,7 +215,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
   }, [activity]);
 
   return (
-    <div className="relative h-full flex flex-col items-center select-none">
+    <div className="relative h-full flex flex-col items-center select-none text-white">
       <div className="absolute top-[10%] flex flex-col items-center w-full">
         <div className="flex flex-col items-center justify-center w-60 h-60 border-[5px] border-green-500 rounded-full mb-8">
           <div className="text-4xl">{formatTime(elapsedTime)}</div>
@@ -234,16 +234,16 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                     Stop
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="text-white bg-white/30 backdrop:blur-md">
+                <AlertDialogContent className="text-white bg-white/30 backdrop:blur-md border-none">
                   <AlertDialogHeader>
                     <AlertDialogTitle>Are you sure you want to stop the timer?</AlertDialogTitle>
-                    <AlertDialogDescription>
+                    <AlertDialogDescription className="text-gray-900">
                       Stopping the timer will save this record.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setShowAlert(false)}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={confirmStop}>End session</AlertDialogAction>
+                    <AlertDialogCancel className = "bg-gray-900 text-white hover:bg-gray-900 hover:text-white border-none" onClick={() => setShowAlert(false)}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction className = "bg-white text-gray-900 hover:bg-white hover:text-gray-900 border-none" onClick={confirmStop}>End session</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
@@ -264,10 +264,10 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                 onValueChange={onChangeTimer}
                 disabled = {isRunningLocal}
               >
-                  <SelectTrigger className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
+                  <SelectTrigger className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed text-gray-900 dark:text-gray-500' : 'bg-white/30 backdrop-blur-md'} border-none`}>
                     <SelectValue placeholder="Stopwatch" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white/20 backdrop-blur-md">
+                  <SelectContent className="bg-white/20 backdrop-blur-md text-white">
                     <SelectItem value="Stopwatch">Stopwatch</SelectItem>
                     <SelectItem value="Timer">Timer</SelectItem>
                     <SelectItem value="Pomodoro">Pomodoro</SelectItem>
@@ -281,10 +281,10 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                   onValueChange={(value) => setActivity(value)}
                   disabled = {isRunningLocal}
                 >
-                  <SelectTrigger className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed' : 'bg-white/30 backdrop-blur-md'}`}>
+                  <SelectTrigger className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed text-gray-900 dark:text-gray-500' : 'bg-white/30 backdrop-blur-md'} border-none`}>
                     <SelectValue placeholder="Stopwatch" />
                   </SelectTrigger>
-                  <SelectContent className="bg-white/20 backdrop-blur-md">
+                  <SelectContent className="bg-white/20 backdrop-blur-md text-white">
                     <SelectItem value="Study">Study</SelectItem>
                     <SelectItem value="Reading">Reading</SelectItem>
                     <SelectItem value="Coding">Coding</SelectItem>
