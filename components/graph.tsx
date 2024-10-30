@@ -321,180 +321,180 @@ const Graph = () => {
 
   return (
     <div className="h-full w-full">
-  <div className="flex gap-2">
-    <Select 
-      value={dropdownSelection} 
-      onValueChange={(value) => setDropdownSelection(value)}
-    >
-      <SelectTrigger className="w-[170px] bg-gray-950 text-white">
-        <SelectValue placeholder="Last 30 days" />
-      </SelectTrigger>
-      <SelectContent className="bg-gray-950 text-white backdrop-blur-md">
-        <SelectItem value="7">Last 7 days</SelectItem>
-        <SelectItem value="week">Current week</SelectItem>
-        <SelectItem value="30">Last 30 days</SelectItem>
-        <SelectItem value="month">Current month</SelectItem>
-        <SelectItem value="year">Current year</SelectItem>
-        <SelectItem value="custom">Custom interval</SelectItem>            
-      </SelectContent>
-    </Select>
-
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          id="date"
-          variant="outline"
-          className={cn(
-            "w-[300px] justify-start text-left font-normal text-white bg-gray-950 border-gray-700",
-            !date && "text-muted-foreground"
-          )}
-          disabled={!(dropdownSelection === "custom")}
+      <div className="flex gap-2">
+        <Select 
+          value={dropdownSelection} 
+          onValueChange={(value) => setDropdownSelection(value)}
         >
-          <CalendarIcon className="mr-2 h-4 w-4 text-white" />
-          {date?.from ? (
-            date.to ? (
-              <>
-                {format(date.from, "LLL dd, y")} -{" "}
-                {format(date.to, "LLL dd, y")}
-              </>
-            ) : (
-              format(date.from, "LLL dd, y")
-            )
-          ) : (
-            <span>Pick a date</span>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 bg-gray-950 text-white" align="start">
-        <Calendar
-          initialFocus
-          mode="range"
-          defaultMonth={date?.from}
-          selected={date}
-          onSelect={(range) => {
-            if (range?.to) {
-              const toDate = new Date(range.to);
-              toDate.setHours(23, 59, 59, 999); // Ensure the 'to' includes the whole day
-              setDate({ from: range.from, to: toDate });
-            } else {
-              setDate(range);
-            }
-          }}
-          numberOfMonths={2}
-        />
-      </PopoverContent>
-    </Popover>
-    
-    <Drawer>
-      <DrawerTrigger asChild>
-        <Button variant="outline" className="text-green-400 ml-3 bg-gray-950 border-gray-700">
-          Daily Goal : {minutesToStr(dailyGoal)}
-        </Button>
-      </DrawerTrigger>
-      <DrawerContent className="bg-black text-white">
-        <div className="mx-auto w-full max-w-sm">
-          <DrawerHeader>
-            <DrawerTitle className="text-green-500">Daily Focus Goal</DrawerTitle>
-            <DrawerDescription>Set your daily focus goal.</DrawerDescription>
-          </DrawerHeader>
-          <div className="p-4 pb-0">
-            <div className="flex items-center justify-center space-x-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 shrink-0 rounded-full bg-gray-950 text-white border-gray-700"
-                onClick={() => handleGoalChange(-30)}
-                disabled={dailyGoal <= 30}
-              >
-                <Minus className="h-4 w-4"/>
-                <span className="sr-only">Decrease</span>
-              </Button>
-              <div className="flex-1 text-center">
-                <div className="text-6xl font-bold tracking-tighter">
-                  {minutesToStr(dailyGoal)}
-                </div>
-                <div className="text-[0.70rem] uppercase text-gray-400">Per day</div>
-              </div>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 shrink-0 rounded-full bg-gray-950 text-white border-gray-700"
-                onClick={() => handleGoalChange(30)}
-                disabled={dailyGoal >= 600}
-              >
-                <Plus className="h-4 w-4"/>
-                <span className="sr-only">Increase</span>
-              </Button>
-            </div>
-            <div className="mt-3 h-[120px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={sampleGoalData}>
-                  <Bar
-                    dataKey="goal"
-                    style={{
-                      fill: "#22c55e",
-                      opacity: 0.9,
-                    }}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-          <DrawerFooter>
-            <DrawerClose asChild>
-              <Button>Set Goal</Button>
-            </DrawerClose>
-          </DrawerFooter>          
-        </div>
-      </DrawerContent>
-    </Drawer>
+          <SelectTrigger className="w-[170px] bg-gray-950 text-white">
+            <SelectValue placeholder="Last 30 days" />
+          </SelectTrigger>
+          <SelectContent className="bg-gray-950 text-white backdrop-blur-md">
+            <SelectItem value="7">Last 7 days</SelectItem>
+            <SelectItem value="week">Current week</SelectItem>
+            <SelectItem value="30">Last 30 days</SelectItem>
+            <SelectItem value="month">Current month</SelectItem>
+            <SelectItem value="year">Current year</SelectItem>
+            <SelectItem value="custom">Custom interval</SelectItem>            
+          </SelectContent>
+        </Select>
 
-    <span className="border p-2 ml-3 rounded-md text-sm text-white bg-gray-950 border-gray-700">
-      Range Total: {Math.round(totalTime / 60000)} min
-    </span>
-  </div>
-
-  <div>
-    {chartLoading ? (
-      <div className="flex flex-col justify-center items-center h-full">
-        <div className="inline-block mt-[20%] w-8 h-8 rounded-full border-4 border-gray-950 border-t-transparent animate-spin">
-          <LoaderCircle />
-        </div>
-        <div className="mt-2 text-white">Fetching the latest data</div>
-      </div>
-    ) : (
-      <ChartContainer config={chartConfig} className="h-full w-full bg-gray-950 text-white">
-        <BarChart
-          data={chartData} 
-          margin={{ top: 20, right: 30, left: 30, bottom: 5 }}
-        >
-          <CartesianGrid vertical={false} stroke="#28272c"/>
-          <XAxis dataKey="date" tickLine={false} tickMargin={5} axisLine={false} />
-          <YAxis
-            tickFormatter={formatYAxis}
-            tickLine={false}
-            axisLine={false}
-            width={60}
-            ticks={ticks}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          <ChartLegend content={<ChartLegendContent />} />
-          
-          {Object.keys(chartConfig).map((key) => (
-            <Bar
-              key={key}
-              dataKey={key} 
-              stackId="a" 
-              fill={chartConfig[key as keyof typeof chartConfig].color} 
-              radius={0}
-              style={{ transition: 'fill 0.3s ease' }}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              id="date"
+              variant="outline"
+              className={cn(
+                "w-[300px] justify-start text-left font-normal text-white bg-gray-950 border-gray-700",
+                !date && "text-muted-foreground"
+              )}
+              disabled={!(dropdownSelection === "custom")}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4 text-white" />
+              {date?.from ? (
+                date.to ? (
+                  <>
+                    {format(date.from, "LLL dd, y")} -{" "}
+                    {format(date.to, "LLL dd, y")}
+                  </>
+                ) : (
+                  format(date.from, "LLL dd, y")
+                )
+              ) : (
+                <span>Pick a date</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0 bg-gray-950 text-white" align="start">
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={date?.from}
+              selected={date}
+              onSelect={(range) => {
+                if (range?.to) {
+                  const toDate = new Date(range.to);
+                  toDate.setHours(23, 59, 59, 999); // Ensure the 'to' includes the whole day
+                  setDate({ from: range.from, to: toDate });
+                } else {
+                  setDate(range);
+                }
+              }}
+              numberOfMonths={2}
             />
-          ))}
-        </BarChart>
-      </ChartContainer>
-    )}
-  </div>
-</div>
+          </PopoverContent>
+        </Popover>
+        
+        <Drawer>
+          <DrawerTrigger asChild>
+            <Button variant="outline" className="text-green-400 ml-3 bg-gray-950 border-gray-700">
+              Daily Goal : {minutesToStr(dailyGoal)}
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent className="bg-black text-white">
+            <div className="mx-auto w-full max-w-sm">
+              <DrawerHeader>
+                <DrawerTitle className="text-green-500">Daily Focus Goal</DrawerTitle>
+                <DrawerDescription>Set your daily focus goal.</DrawerDescription>
+              </DrawerHeader>
+              <div className="p-4 pb-0">
+                <div className="flex items-center justify-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 rounded-full bg-gray-950 text-white border-gray-700"
+                    onClick={() => handleGoalChange(-30)}
+                    disabled={dailyGoal <= 30}
+                  >
+                    <Minus className="h-4 w-4"/>
+                    <span className="sr-only">Decrease</span>
+                  </Button>
+                  <div className="flex-1 text-center">
+                    <div className="text-6xl font-bold tracking-tighter">
+                      {minutesToStr(dailyGoal)}
+                    </div>
+                    <div className="text-[0.70rem] uppercase text-gray-400">Per day</div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 shrink-0 rounded-full bg-gray-950 text-white border-gray-700"
+                    onClick={() => handleGoalChange(30)}
+                    disabled={dailyGoal >= 600}
+                  >
+                    <Plus className="h-4 w-4"/>
+                    <span className="sr-only">Increase</span>
+                  </Button>
+                </div>
+                <div className="mt-3 h-[120px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={sampleGoalData}>
+                      <Bar
+                        dataKey="goal"
+                        style={{
+                          fill: "#22c55e",
+                          opacity: 0.9,
+                        }}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <DrawerFooter>
+                <DrawerClose asChild>
+                  <Button>Set Goal</Button>
+                </DrawerClose>
+              </DrawerFooter>          
+            </div>
+          </DrawerContent>
+        </Drawer>
+
+        <span className="border p-2 ml-3 rounded-md text-sm text-white bg-gray-950 border-gray-700">
+          Range Total: {Math.round(totalTime / 60000)} min
+        </span>
+      </div>
+
+      <div>
+        {chartLoading ? (
+          <div className="flex flex-col justify-center items-center h-full">
+            <div className="inline-block mt-[20%] w-8 h-8 rounded-full border-4 border-gray-950 border-t-transparent animate-spin">
+              <LoaderCircle />
+            </div>
+            <div className="mt-2 text-white">Fetching the latest data</div>
+          </div>
+        ) : (
+          <ChartContainer config={chartConfig} className="h-full w-full bg-gray-950 text-white">
+            <BarChart
+              data={chartData} 
+              margin={{ top: 20, right: 30, left: 30, bottom: 5 }}
+            >
+              <CartesianGrid vertical={false} stroke="#28272c"/>
+              <XAxis dataKey="date" tickLine={false} tickMargin={5} axisLine={false} />
+              <YAxis
+                tickFormatter={formatYAxis}
+                tickLine={false}
+                axisLine={false}
+                width={60}
+                ticks={ticks}
+              />
+              <Tooltip content={<CustomTooltip />} cursor = {false} /> {/*cursor is the thing that controls that background of bar on hover, but for some reason its 'fill' does not work anymore and i cannot find a replacement. the background goes white on hover in light mode so i am disabling it for now.*/}
+              <ChartLegend content={<ChartLegendContent />} />
+              
+              {Object.keys(chartConfig).map((key) => (
+                <Bar
+                  key={key}
+                  dataKey={key} 
+                  stackId="a" 
+                  fill={chartConfig[key as keyof typeof chartConfig].color} 
+                  radius={0}
+                  style={{ transition: 'fill 0.3s ease' }}
+                />
+              ))}
+            </BarChart>
+          </ChartContainer>
+        )}
+      </div>
+    </div>
 
   );
 }

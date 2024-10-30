@@ -295,7 +295,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   }, [isRunningLocal]);
 
   return (
-  <div className="relative h-full flex flex-col items-center select-none text-white">
+  <div className="relative h-full flex flex-col items-center select-none text-white  w-full">
     <div className="absolute top-[10%] flex flex-col items-center w-full">
       <div
         className="relative w-60 h-60 mb-8"

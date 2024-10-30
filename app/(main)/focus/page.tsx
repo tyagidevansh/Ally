@@ -102,12 +102,12 @@ const Home = () => {
           ))}
         </Slider>
       </div>
-      <div className="absolute inset-0 bg-black opacity-50 z-10"></div>
+      <div className="absolute inset-0 bg-black opacity-20 z-10"></div>
       <div className="relative z-20 flex flex-col h-full">
         <Navbar showToggle={false}/>
         
         <div className="flex-1 md:grid md:grid-cols-10 flex flex-col p-4">
-          <div className="md:col-span-3 row-auto md:ml-10 mt-16 md:bg-white/10 rounded-xl md:backdrop-blur-md justify-center">
+          <div className="md:col-span-3 row-auto md:ml-10 mt-16 md:bg-white/10 rounded-xl md:backdrop-blur-md">
             {renderComponent()}
           </div>
 
@@ -136,9 +136,6 @@ const Home = () => {
               </Button>
             </div>
           </div>
-
-
-          
         </div>
       </div>
     </div>
