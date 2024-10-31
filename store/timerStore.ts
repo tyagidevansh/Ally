@@ -25,10 +25,12 @@ const useTimerStore = create<TimerStore>()(
       setStartTime: (value: number | null) => set({ startTime: value }),
     }),
     {
-      name: "timer-session-storage",
-      getStorage: () => (typeof window !== "undefined" ? window.sessionStorage : undefined) as StateStorage,
+      name: "timer-storage",
+      getStorage: () => (typeof window !== "undefined" ? window.localStorage : undefined) as StateStorage,
     }
   )
 );
 
 export default useTimerStore;
+
+//add functionality to click on the timer to make runningCount zero and have a dialog explain that

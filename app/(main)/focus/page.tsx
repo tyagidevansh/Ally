@@ -115,7 +115,7 @@ const Home = () => {
             <p className="text-white text-center text-xl">"{quote}"</p>
           </div>
           
-          <div className="fixed bottom-0 left-0 right-0 p-4 z-30 md:static md:top-32 md:mt-10 md:left-10 md:right-auto md:bg-transparent">
+          <div className="relative mt-auto bottom-0 left-0 right-0 p-4 z-30 md:static md:top-32 md:mt-10 md:left-10 md:right-auto md:bg-transparent">
             <div className="flex flex-row items-center justify-center gap-4 md:justify-start">
               <Button 
                 onClick={() => sliderRef.current.slickPrev()} 
