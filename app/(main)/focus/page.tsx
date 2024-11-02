@@ -21,7 +21,6 @@ type Environment = {
 //persist the state of activity between reloads
 //notifications for pomodoro and stopwatch
 //is there a max time for stopwatch?
-//timer icon should take you to timer page? give a dropdown somehow?
 
 const environments: Environment[] = [
   {image: "https://media.giphy.com/media/3diu2dFNpV8AnozJ3V/giphy.gif", music: "S_MOd40zlYU", name: "Dusk"},
@@ -84,7 +83,7 @@ const Home = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col relative overflow-hidden">
+    <div className="h-screen flex flex-col relative overflow-auto md:overflow-hidden">
       <div className="absolute inset-0 z-0">
         <Slider ref={sliderRef} {...settings}>
           {environments.map((env, index) => (

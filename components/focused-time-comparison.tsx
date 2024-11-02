@@ -60,7 +60,7 @@ const FocusTrend = () => {
   const twoMonthsAgoAtCurrentDayPercent = (twoMonthsAgo.timeAtCurrentDay / largestTotal) * 100;
 
   return (
-    <div className="bg-transparent rounded-lg h-full flex flex-col" style={{ maxHeight: 'calc(100vh / 3)' }}>
+    <div className="bg-transparent rounded-lg h-full flex flex-col mb-4 md:mb-2" style={{ maxHeight: 'calc(100vh / 3)' }}>
       <h2 className="text-xl font-bold text-green-500 mb-2">Focus Trend</h2>
       <div className="space-y-3">
         <div className="text-white text-sm">

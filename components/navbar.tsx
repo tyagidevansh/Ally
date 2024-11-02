@@ -4,8 +4,10 @@ import { UserButton } from '@clerk/nextjs';
 import { Timer, TimerOff, BarChart2, BookOpen, PenTool, Menu } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTimerCommunication } from '@/lib/timer-communication';
+import useTimerStore from "@/store/timerStore";
 import { ModeToggle } from './mode-toggle';
 import { useTheme } from 'next-themes';
+import { Button } from './ui/button';
 
 interface NavbarProps {
   showToggle: boolean;
@@ -15,7 +17,8 @@ const Navbar = ({ showToggle }: NavbarProps) => {
   const [isClient, setIsClient] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const { isRunning, runningCount } = useTimerCommunication();
+  const { isRunning, runningCount, broadcastTimerUpdate } = useTimerCommunication();
+  const {setRunningCount} = useTimerStore();
   const { theme } = useTheme();
 
   useEffect(() => {
@@ -95,12 +98,18 @@ const Navbar = ({ showToggle }: NavbarProps) => {
 
         <div className="flex items-center space-x-4 relative">
           {isClient && (
-            <div className="text-green-600 dark:text-green-400 relative" title={`${runningCount} timer${runningCount === 1 ? '' : 's'} running`}>
+            <div
+              className="text-green-600 dark:text-green-400 relative"
+              title={`${runningCount} timer${runningCount === 1 ? '' : 's'} running.\nClick to reset count to 0 \n(without stopping any timers)`}
+            >
               {runningCount > 0 ? (
-                <>
+                <Button 
+                  className='text-green-600 p-0 bg-transparent'
+                  onClick={() => {setRunningCount(0); broadcastTimerUpdate();}}
+                >
                   <Timer size={24} />
-                  <span className="absolute top-5 right-0 w-3 h-3 bg-red-500 dark:bg-red-500 rounded-full border-2 border-white dark:border-gray-900" style={{ transform: 'translate(50%, -50%)' }} />
-                </>
+                  <span className="absolute top-7 right-0 w-3 h-3 bg-red-500 dark:bg-red-500 rounded-full border-2 border-white dark:border-gray-900" style={{ transform: 'translate(50%, -50%)' }} />
+                </Button>
               ) : (
                 <TimerOff size={24} />
               )}
@@ -113,7 +122,11 @@ const Navbar = ({ showToggle }: NavbarProps) => {
       </nav>
 
       {isDropdownOpen && (
-        <div className="fixed top-16 left-0 z-30 bg-white/20 backdrop-blur-md rounded-lg shadow-lg p-4 space-y-4">
+        <div
+          className={`fixed top-16 left-0 z-30 bg-white/20 backdrop-blur-md rounded-lg shadow-lg p-4 space-y-4 ${
+            showToggle ? 'text-black' : 'text-white'
+          } dark:text-white`}
+        >          
           <Link href="/dashboard" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors">
             <BarChart2 size={18} />
             <span>Dashboard</span>
