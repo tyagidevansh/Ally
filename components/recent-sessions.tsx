@@ -1,6 +1,10 @@
 'use client';
 
+import { PlusCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Button } from './ui/button';
 
 interface Session {
   id: string;
@@ -27,6 +31,7 @@ const formatTime = (time: number) => {
 const RecentSessions = () => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const fetchRecentSessions = async () => {
@@ -53,7 +58,57 @@ const RecentSessions = () => {
 
   return (
     <div className="h-full w-full custom-scrollbar overflow-y-auto" style={{ maxHeight: 'calc(100vh / 3)' }}>
-      <h2 className="text-xl font-bold mb-4 text-green-500">Recent Sessions</h2>
+      <div className="flex flex-row justify-between items-center">
+        <h2 className="text-xl font-bold mb-4 text-green-500">Recent Sessions</h2>
+        
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <button className="text-green-500 cursor-pointer">
+              <PlusCircle />
+            </button>
+          </DialogTrigger>
+          
+          <DialogContent className='bg-gray-950 text-white'>
+            <DialogHeader>
+              <DialogTitle className='text-green-500'>Add New Log</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-100">Activity</label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select activity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Study">Study</SelectItem>
+                    <SelectItem value="Reading">Reading</SelectItem>
+                    <SelectItem value="Coding">Coding</SelectItem>
+                    <SelectItem value="Meditation">Meditation</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-100">Start Time</label>
+                <input type="time" className="w-full border border-gray-300 rounded-md p-2" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-100">Duration (in minutes)</label>
+                <input type="number" className="w-full border border-gray-300 rounded-md p-2" placeholder="Enter duration in minutes" />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button onClick={() => setOpen(false)}>Cancel</Button>
+              <Button>Add Session</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
       <div className="space-y-3">
         {sessions.length === 0 ? (
           <p className="text-white">No recent sessions available.</p>
