@@ -282,7 +282,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                   disabled = {isRunningLocal}
                 >
                   <SelectTrigger className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed text-gray-900 dark:text-gray-500' : 'bg-white/30 backdrop-blur-md'} border-none`}>
-                    <SelectValue placeholder="Stopwatch" />
+                    <SelectValue placeholder="Study" />
                   </SelectTrigger>
                   <SelectContent className="bg-white/20 backdrop-blur-md text-white">
                     <SelectItem value="Study">Study</SelectItem>

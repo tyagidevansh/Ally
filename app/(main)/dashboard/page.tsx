@@ -26,11 +26,11 @@ const Dashboard = () => {
             <Graph />
           </DashboardBox>
 
-          <DashboardBox className="md:row-span-1 w-full min-h-[40vh]">
+          <DashboardBox className="md:row-span-1 w-full min-h-[35vh]">
             <FocusTrend />
           </DashboardBox>
 
-          <DashboardBox className="md:row-span-2 w-full max-h-[60vh] min-h-[60vh] md:max-h-none">
+          <DashboardBox className="md:row-span-2 w-full max-h-[60vh] min-h-[35vh] md:max-h-none">
             <ToDoList />
           </DashboardBox>
 
@@ -41,7 +41,7 @@ const Dashboard = () => {
             <DashboardBox className="w-full min-h-[40vh]">
               <BestHours />
             </DashboardBox>
-            <DashboardBox className="w-full min-h-[40vh]">
+            <DashboardBox className="w-full min-h-[35vh]">
               <CurrentStreak />
             </DashboardBox>
           </div>
