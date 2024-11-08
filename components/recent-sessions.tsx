@@ -80,7 +80,7 @@ const RecentSessions = () => {
     const seconds = parseInt(secondRef.current?.value || "0", 10);
   
     const startTime = new Date();
-    startTime.setHours(hours, minutes, seconds, 0); // sets the milliseconds to 0
+    startTime.setHours(hours, minutes, seconds); // sets the milliseconds to 0
   
     return startTime;
   };
@@ -94,12 +94,13 @@ const RecentSessions = () => {
       const response = await axios.post("/api/timer-log", {
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
-        duration: Number(newDuration),
+        duration: Number(newDuration) * 60000,
         activity,
       });
       console.log("Log saved successfully:", response.data);
+      setOpen(false);
     } catch (error) {
-      console.error("Error saving timer log:", error);
+      //console.error("Error saving timer log:", error);
     }
   };
   
@@ -115,7 +116,7 @@ const RecentSessions = () => {
         
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <button className="text-green-500 cursor-pointer">
+            <button className="text-green-500 cursor-pointer mb-3">
               <PlusCircle />
             </button>
           </DialogTrigger>

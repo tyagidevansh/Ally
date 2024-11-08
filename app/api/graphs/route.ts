@@ -74,6 +74,7 @@ export async function GET(req: Request) {
           date: month.slice(0, 3),
           ...activityTimes,
           totalTime,
+          dailyGoal: profile.dailyGoal,
         });
       }
     } else {

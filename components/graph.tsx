@@ -118,7 +118,7 @@ const formatTime = (time: number) => {
 };
 
 const generateTicks = (maxValue : number) => {
-  const tickIntervals = [300000, 600000, 900000, 1800000, 3600000, 5400000, 7200000, 9000000, 10800000, 14400000, 18000000]; // 5 min, 10 min, 15 min, 30 min, 1 hr, 1.5 hr, 2hr, 2.5hr, 3hr, 4hr, 5hr
+  const tickIntervals = [300000, 600000, 900000, 1800000, 3600000, 5400000, 7200000, 9000000, 10800000, 14400000, 18000000, 36000000, 54000000, 72000000, 90000000, 108000000, 144000000, 18000000, 360000000 ]; // 5 min, 10 min, 15 min, 30 min, 1 hr, 1.5 hr, 2hr, 2.5hr, 3hr, 4hr, 5hr, 10, 15, 20, 25, 30, 40, 50, 100hr
   const ticks = [];
 
   for (let i = 0; i <= maxValue; i += tickIntervals.find(interval => interval >= maxValue / 5)!) {
@@ -189,7 +189,6 @@ const Graph = () => {
       }
 
       if (Object.keys(updates).length > 0) {
-        console.log("updating")
         await fetch('/api/current-streak', {
           method: 'POST',
           headers: {
@@ -269,7 +268,7 @@ const Graph = () => {
         },
       });
       setChartData(response.data.chartData);
-      console.log(chartData);
+      console.log(response);
       setDailyGoal(response.data.chartData[0].dailyGoal);
     } catch (error) {
       console.error("Error fetching chart data:", error);
