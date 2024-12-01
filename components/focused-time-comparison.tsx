@@ -89,7 +89,7 @@ const FocusTrend = () => {
         <div className="text-white text-sm">
           <p className="mb-1">Two Months Ago</p>
           <div className="relative w-full h-4 bg-gray-700 rounded-lg">
-            <div className="absolute top-0 left-0 h-4 bg-gray-500 rounded-lg" style={{ width: `${twoMonthsAgoPercent}%` }} />
+            <div className="absolute top-0 left-0 h-4 bg-green-500 rounded-lg" style={{ width: `${twoMonthsAgoPercent}%` }} />
             <div className="absolute top-0 h-4 bg-white rounded-full" style={{ left: `${twoMonthsAgoAtCurrentDayPercent}%`, width: '8px', height: '8px', transform: 'translateY(50%) translateX(-50%)' }} />
           </div>
           <div className="flex justify-between text-xs text-gray-400 mt-1">
