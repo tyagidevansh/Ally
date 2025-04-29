@@ -1,4 +1,4 @@
-import { Bar, BarChart, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts"
+import { Bar, BarChart, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, ComposedChart, Line } from "recharts"
 import { ChartConfig, ChartContainer, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -463,7 +463,7 @@ const Graph = () => {
           </div>
         ) : (
           <ChartContainer config={chartConfig} className="h-full w-full bg-gray-950 text-white">
-            <BarChart
+            <ComposedChart
               data={chartData} 
               margin={{ top: 20, right: 30, left: 30, bottom: 5 }}
             >
@@ -489,7 +489,13 @@ const Graph = () => {
                   style={{ transition: 'fill 0.3s ease' }}
                 />
               ))}
-            </BarChart>
+              <Line 
+                dataKey="weeklyAverage"
+                stroke = "#ff7300"
+                strokeWidth={2}
+                dot = {false}
+              />
+            </ComposedChart>
           </ChartContainer>
         )}
       </div>

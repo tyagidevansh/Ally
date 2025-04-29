@@ -91,6 +91,9 @@ export async function GET(req: Request) {
         dateMap[date][log.activity] += log.duration;
       });
 
+      let weeklyTimes: number[] = [];
+      let weeklyTotal = 0, weeklyAverage = 0;
+
       for (let dt = new Date(startTime); dt <= endTime; dt.setUTCDate(dt.getUTCDate() + 1)) {
         const date = dt.toUTCString().slice(5, 11); // MMM DD in UTC
         const activityTimes: { [key: string]: number } = {};
@@ -101,14 +104,30 @@ export async function GET(req: Request) {
           activityTimes[activity] = time;
           totalTime += time;
         });
+
+        if (weeklyTimes.length < 7) {
+          weeklyTimes.push(totalTime);
+          weeklyTotal += totalTime;
+        } else {
+          let removed = weeklyTimes.shift();
+          weeklyTotal -= removed || 0;
+          weeklyTotal += totalTime;
+          weeklyTimes.push(totalTime);
+        }
+
+        weeklyAverage = weeklyTotal / weeklyTimes.length;
+
         chartData.push({
           date,
           ...activityTimes,
           totalTime,
           dailyGoal: profile.dailyGoal,
+          weeklyAverage,
         });
       }
     }
+
+    console.log(chartData);
 
     return NextResponse.json({ success: "message received", chartData });
   } catch (error) {
