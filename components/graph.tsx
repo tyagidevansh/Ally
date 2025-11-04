@@ -312,6 +312,24 @@ const Graph = () => {
         end = new Date(Date.UTC(currentYear, 11, 31, 23, 59, 59, 999));
         shouldByMonth = true;
         break;
+      case "alltime":
+        // All time - from earliest activity to now
+        // Set a very early date, backend will adjust to actual earliest
+        start = new Date(Date.UTC(2000, 0, 1, 0, 0, 0, 0));
+        const nowAlltime = new Date();
+        end = new Date(
+          Date.UTC(
+            nowAlltime.getUTCFullYear(),
+            nowAlltime.getUTCMonth(),
+            nowAlltime.getUTCDate(),
+            23,
+            59,
+            59,
+            999
+          )
+        );
+        shouldByMonth = true;
+        break;
       case "custom":
         // Set to September 13, 2024 to present in UTC
         start = new Date(Date.UTC(2024, 8, 13, 0, 0, 0, 0));
@@ -364,6 +382,7 @@ const Graph = () => {
             startTime: date.from!.toISOString(),
             endTime: date.to!.toISOString(),
             byMonth: byMonth,
+            allTime: dropdownSelection === "alltime",
           },
           signal: abortController.signal,
         });
@@ -532,6 +551,7 @@ const Graph = () => {
             <SelectItem value="30">Last 30 days</SelectItem>
             <SelectItem value="month">Current month</SelectItem>
             <SelectItem value="year">Current year</SelectItem>
+            <SelectItem value="alltime">Every month</SelectItem>
             <SelectItem value="custom">Custom interval</SelectItem>
           </SelectContent>
         </Select>

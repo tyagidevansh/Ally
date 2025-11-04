@@ -17,16 +17,41 @@ export async function GET(req: Request) {
     const startTimeString = url.searchParams.get("startTime");
     const endTimeString = url.searchParams.get("endTime");
     const byMonth = url.searchParams.get("byMonth") === "true";
+    const allTime = url.searchParams.get("allTime") === "true";
     
     if (!startTimeString || !endTimeString) {
       return new NextResponse("Invalid date range", { status: 400 });
     }
 
-    const startTime = new Date(startTimeString);
+    let startTime = new Date(startTimeString);
     const endTime = new Date(endTimeString);
 
     if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
       return new NextResponse("Invalid date format", { status: 400 });
+    }
+
+    // If allTime mode, find the earliest timerLog entry
+    if (allTime) {
+      const earliestLog = await db.timerLog.findFirst({
+        where: {
+          profileId: profile.id,
+        },
+        orderBy: {
+          startTime: 'asc',
+        },
+        select: {
+          startTime: true,
+        },
+      });
+
+      if (earliestLog) {
+        // Set startTime to the beginning of the earliest month
+        startTime = new Date(Date.UTC(
+          earliestLog.startTime.getUTCFullYear(),
+          earliestLog.startTime.getUTCMonth(),
+          1
+        ));
+      }
     }
 
     const activities = ["Study", "Reading", "Coding", "Meditation", "Other"];
