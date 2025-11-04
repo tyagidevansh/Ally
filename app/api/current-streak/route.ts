@@ -82,8 +82,6 @@ export async function POST(req: Request) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
-    console.log(data);
-
     const updateData: any = {};
 
     if (data.streakStart !== undefined) {

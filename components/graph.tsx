@@ -1,7 +1,22 @@
-import { Bar, BarChart, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, ComposedChart, Line } from "recharts"
-import { ChartConfig, ChartContainer, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
+import {
+  Bar,
+  BarChart,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+  ComposedChart,
+  Line,
+} from "recharts";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { LoaderCircle } from "lucide-react";
 
 import { addDays, format, setDate } from "date-fns";
@@ -15,7 +30,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/popover";
 
 import {
   Select,
@@ -25,7 +40,7 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 
 import {
   Drawer,
@@ -36,7 +51,7 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
-} from "@/components/ui/drawer"
+} from "@/components/ui/drawer";
 
 const chartConfig = {
   Study: {
@@ -50,16 +65,16 @@ const chartConfig = {
   Coding: {
     label: "Coding",
     color: "#3b82f6",
-  }, 
+  },
   Meditation: {
     label: "Meditation",
     color: "#a855f7",
-  }, 
+  },
   Other: {
     label: "Other",
-    color: "#f59e0b"
-  }
-} satisfies ChartConfig
+    color: "#f59e0b",
+  },
+} satisfies ChartConfig;
 
 const sampleGoalData = [
   {
@@ -101,7 +116,7 @@ const sampleGoalData = [
   {
     goal: 349,
   },
-]
+];
 
 const formatTime = (time: number) => {
   const hours = Math.floor(time / 3600000);
@@ -109,7 +124,9 @@ const formatTime = (time: number) => {
   const seconds = Math.floor((time % 60000) / 1000);
 
   if (hours > 0) {
-    return `${hours} hr ${minutes.toString().padStart(2, "0")} min ${seconds.toString().padStart(2, "0")} sec`;
+    return `${hours} hr ${minutes.toString().padStart(2, "0")} min ${seconds
+      .toString()
+      .padStart(2, "0")} sec`;
   } else if (minutes > 0) {
     return `${minutes} min ${seconds.toString().padStart(2, "0")} sec`;
   } else {
@@ -117,215 +134,396 @@ const formatTime = (time: number) => {
   }
 };
 
-const generateTicks = (maxValue : number) => {
-  const tickIntervals = [300000, 600000, 900000, 1800000, 3600000, 5400000, 7200000, 9000000, 10800000, 14400000, 18000000, 36000000, 54000000, 72000000, 90000000, 108000000, 144000000, 18000000, 360000000 ]; // 5 min, 10 min, 15 min, 30 min, 1 hr, 1.5 hr, 2hr, 2.5hr, 3hr, 4hr, 5hr, 10, 15, 20, 25, 30, 40, 50, 100hr
+const generateTicks = (maxValue: number) => {
+  const tickIntervals = [
+    300000, 600000, 900000, 1800000, 3600000, 5400000, 7200000, 9000000,
+    10800000, 14400000, 18000000, 36000000, 54000000, 72000000, 90000000,
+    108000000, 144000000, 18000000, 360000000,
+  ]; // 5 min, 10 min, 15 min, 30 min, 1 hr, 1.5 hr, 2hr, 2.5hr, 3hr, 4hr, 5hr, 10, 15, 20, 25, 30, 40, 50, 100hr
   const ticks = [];
 
-  for (let i = 0; i <= maxValue; i += tickIntervals.find(interval => interval >= maxValue / 5)!) {
+  for (
+    let i = 0;
+    i <= maxValue;
+    i += tickIntervals.find((interval) => interval >= maxValue / 5)!
+  ) {
     ticks.push(i);
   }
-  
+
   return ticks;
-}
+};
 
 const Graph = () => {
   const [chartData, setChartData] = useState<any[]>([]);
   const [chartLoading, setChartLoading] = useState<boolean>(true);
-  const [dropdownSelection, setDropdownSelection] = useState<string>("30"); //7, week, 30, month, year
+  const [dropdownSelection, setDropdownSelection] = useState<string>("30");
   const [byMonth, setByMonth] = useState<boolean>(false);
   const [dailyGoal, setDailyGoal] = useState<number>(180);
 
+  // Initialize with UTC dates
+  const now = new Date();
   const [date, setDate] = useState<DateRange | undefined>({
-    from: addDays(new Date(), -30),
-    to: new Date(),
-  })
+    from: new Date(Date.UTC(2024, 8, 13, 0, 0, 0, 0)),
+    to: new Date(
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        23,
+        59,
+        59,
+        999
+      )
+    ),
+  });
 
-  useEffect(() => {
-    if (dropdownSelection !== "custom") {
-      calculateDateRange();
+  // Refs for request cancellation and debouncing
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const requestTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasInitializedRef = useRef(false);
+
+  // Memoized calculations
+  const { maxTime, totalTime, ticks } = useMemo(() => {
+    if (!chartData.length) return { maxTime: 0, totalTime: 0, ticks: [] };
+
+    const max = Math.max(...chartData.map((data) => data.totalTime), 0);
+    const total = chartData.reduce((acc, data) => acc + data.totalTime, 0);
+    const generatedTicks = generateTicks(max);
+
+    return { maxTime: max, totalTime: total, ticks: generatedTicks };
+  }, [chartData]);
+
+  // Memoized date range calculation
+  const calculateDateRange = useCallback(() => {
+    let start: Date, end: Date;
+    let shouldByMonth = false;
+
+    switch (dropdownSelection) {
+      case "7":
+        // Last 7 days in UTC
+        const now7 = new Date();
+        end = new Date(
+          Date.UTC(
+            now7.getUTCFullYear(),
+            now7.getUTCMonth(),
+            now7.getUTCDate(),
+            23,
+            59,
+            59,
+            999
+          )
+        );
+        start = new Date(
+          Date.UTC(
+            now7.getUTCFullYear(),
+            now7.getUTCMonth(),
+            now7.getUTCDate() - 7,
+            0,
+            0,
+            0,
+            0
+          )
+        );
+        break;
+      case "week":
+        // Current week in UTC (Sunday to Saturday)
+        const nowWeek = new Date();
+        const dayOfWeek = nowWeek.getUTCDay();
+        start = new Date(
+          Date.UTC(
+            nowWeek.getUTCFullYear(),
+            nowWeek.getUTCMonth(),
+            nowWeek.getUTCDate() - dayOfWeek,
+            0,
+            0,
+            0,
+            0
+          )
+        );
+        end = new Date(
+          Date.UTC(
+            nowWeek.getUTCFullYear(),
+            nowWeek.getUTCMonth(),
+            nowWeek.getUTCDate() - dayOfWeek + 6,
+            23,
+            59,
+            59,
+            999
+          )
+        );
+        break;
+      case "30":
+        // Last 30 days in UTC
+        const now30 = new Date();
+        end = new Date(
+          Date.UTC(
+            now30.getUTCFullYear(),
+            now30.getUTCMonth(),
+            now30.getUTCDate(),
+            23,
+            59,
+            59,
+            999
+          )
+        );
+        start = new Date(
+          Date.UTC(
+            now30.getUTCFullYear(),
+            now30.getUTCMonth(),
+            now30.getUTCDate() - 30,
+            0,
+            0,
+            0,
+            0
+          )
+        );
+        break;
+      case "month":
+        // Current month in UTC
+        const nowMonth = new Date();
+        start = new Date(
+          Date.UTC(
+            nowMonth.getUTCFullYear(),
+            nowMonth.getUTCMonth(),
+            1,
+            0,
+            0,
+            0,
+            0
+          )
+        );
+        end = new Date(
+          Date.UTC(
+            nowMonth.getUTCFullYear(),
+            nowMonth.getUTCMonth() + 1,
+            0,
+            23,
+            59,
+            59,
+            999
+          )
+        );
+        break;
+      case "year":
+        // Current year in UTC - all 12 months
+        const nowYear = new Date();
+        const currentYear = nowYear.getUTCFullYear();
+        start = new Date(Date.UTC(currentYear, 0, 1, 0, 0, 0, 0));
+        end = new Date(Date.UTC(currentYear, 11, 31, 23, 59, 59, 999));
+        shouldByMonth = true;
+        break;
+      case "custom":
+        // Set to September 13, 2024 to present in UTC
+        start = new Date(Date.UTC(2024, 8, 13, 0, 0, 0, 0));
+        const nowCustom = new Date();
+        end = new Date(
+          Date.UTC(
+            nowCustom.getUTCFullYear(),
+            nowCustom.getUTCMonth(),
+            nowCustom.getUTCDate(),
+            23,
+            59,
+            59,
+            999
+          )
+        );
+        break;
+      default:
+        return;
     }
+
+    setByMonth(shouldByMonth);
+    setDate({ from: start, to: end });
   }, [dropdownSelection]);
 
+  // Debounced data fetching
+  const handleRequest = useCallback(async () => {
+    if (!date?.from || !date?.to) return;
+
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Clear previous timeout
+    if (requestTimeoutRef.current) {
+      clearTimeout(requestTimeoutRef.current);
+    }
+
+    // Debounce the request
+    requestTimeoutRef.current = setTimeout(async () => {
+      setChartLoading(true);
+
+      // Create new abort controller
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
+      try {
+        const response = await axios.get("/api/graphs", {
+          params: {
+            startTime: date.from!.toISOString(),
+            endTime: date.to!.toISOString(),
+            byMonth: byMonth,
+          },
+          signal: abortController.signal,
+        });
+
+        // Only update if this request wasn't cancelled
+        if (!abortController.signal.aborted) {
+          setChartData(response.data.chartData);
+          if (response.data.chartData[0]?.dailyGoal) {
+            setDailyGoal(response.data.chartData[0].dailyGoal);
+          }
+        }
+      } catch (error) {
+        if (!axios.isCancel(error)) {
+          console.error("Error fetching chart data:", error);
+        }
+      } finally {
+        if (!abortController.signal.aborted) {
+          setChartLoading(false);
+        }
+      }
+    }, 300); // 300ms debounce
+  }, [date?.from, date?.to, byMonth]);
+
+  // Effect for dropdown selection changes
   useEffect(() => {
-    if (date?.from && date?.to) {
+    calculateDateRange();
+  }, [dropdownSelection, calculateDateRange]);
+
+  // Effect for date changes
+  useEffect(() => {
+    if (date?.from && date?.to && hasInitializedRef.current) {
       handleRequest();
     }
-  }, [date]);
+    if (date?.from && date?.to) {
+      hasInitializedRef.current = true;
+    }
+  }, [date?.from?.getTime(), date?.to?.getTime(), byMonth]);
 
+  // Cleanup on unmount
   useEffect(() => {
-    if (!chartLoading) {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (requestTimeoutRef.current) {
+        clearTimeout(requestTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Streak handling - moved to separate effect, runs less frequently
+  useEffect(() => {
+    if (!chartLoading && chartData.length > 0) {
       handleStreak();
     }
   }, [chartLoading]);
 
-  const handleStreak = async () => {
+  const handleStreak = useCallback(async () => {
     try {
-      const streakData = await fetch('/api/current-streak');
+      const streakData = await fetch("/api/current-streak");
       const streakDataJson = await streakData.json();
-      console.log(streakDataJson);
-      const updates: { streakStart?: number; streakLast?: number; bestStreak?: number } = {};
+      const updates: {
+        streakStart?: number;
+        streakLast?: number;
+        bestStreak?: number;
+      } = {};
 
       const now = new Date();
-      //const localMidnight = new Date(now);
-      //localMidnight.setHours(0, 0, 0, 0); 
-      const utcMidnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-
+      const utcMidnight = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+      );
       const yesterdayMidnight = new Date(utcMidnight);
       yesterdayMidnight.setDate(utcMidnight.getDate() - 1);
 
-      //check for streak changes at local midnight
       if (now >= utcMidnight && streakDataJson.yesterdayTime < dailyGoal) {
         updates.streakStart = Date.now();
-        updates.streakLast = Date.now(); // start a new streak today
-
-      } else if (streakDataJson.todayTime >= dailyGoal) {
-        //today's goal has been met, so update `streakLast`
         updates.streakLast = Date.now();
-
-        //if the previous day's goal was not met, start a new streak today
+      } else if (streakDataJson.todayTime >= dailyGoal) {
+        updates.streakLast = Date.now();
         if (streakDataJson.yesterdayTime < dailyGoal) {
           updates.streakStart = Date.now();
         }
       }
 
       if (Object.keys(updates).length > 0) {
-        await fetch('/api/current-streak', {
-          method: 'POST',
+        await fetch("/api/current-streak", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(updates),
         });
       }
-
     } catch (error) {
       console.error("Error handling streak update:", error);
     }
-  };
+  }, [dailyGoal]);
 
-  
-  const calculateDateRange = () => {
-    let start: Date = new Date(), end: Date = new Date();
-    setByMonth(false);
+  const handleGoalChange = useCallback(
+    async (adjustment: number) => {
+      const newGoal = Math.max(30, Math.min(600, dailyGoal + adjustment));
+      setDailyGoal(newGoal);
 
-    switch (dropdownSelection) {
-      case "7":
-        end = new Date();
-        start = addDays(end, -7);
-        break;
-      case "week":
-        const now = new Date();
-        const dayOfWeek = now.getUTCDay();
-        start = new Date(now);
-        start.setUTCDate(now.getUTCDate() - dayOfWeek); // start of the week
-        start.setUTCHours(0, 0, 0, 0);
-        end = new Date(start);
-        end.setUTCDate(start.getUTCDate() + 6); //end of the week
-        end.setUTCHours(23, 59, 59, 999);
-        break;
-      case "30":
-        end = new Date();
-        start = addDays(end, -30);
-        break;
-      case "month":
-        const currentMonth = new Date();
-        start = new Date(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth(), 1); // start of the month
-        end = new Date(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth() + 1, 0); // end of the month
-        break;
-      case "year":
-        const currentYear = new Date().getFullYear();
-        start = new Date(currentYear, 0, 1);
-        end = new Date(currentYear, 11, 31, 23, 59, 59, 999);
-        setByMonth(true);
-        break;
-      case "custom":
-        if (date?.to) {
-          end = new Date(date.to);
-          end.setHours(23, 59, 59, 999);
-        } else {
-          new Date();
-        }
-        start = date?.from || new Date();
-        break;
-      default:
-        return;
-    }
-
-    setDate({ from: start, to: end });
-  };
-
-  const handleRequest = async () => {
-    if (!date?.from || !date?.to) return;
-    
-    setChartLoading(true);
-    
-    try {
-      const response = await axios.get("/api/graphs", {
-        params: {
-          startTime: date.from.toISOString(),
-          endTime: new Date(date.to.setHours(23, 59, 59, 999)).toISOString(),
-          byMonth: byMonth,
-        },
+      // Don't await - fire and forget for better UX
+      axios.post("/api/graphs", { goal: newGoal }).catch((error) => {
+        console.error("Error updating goal:", error);
+        // Optionally revert on error
+        setDailyGoal(dailyGoal);
       });
-      setChartData(response.data.chartData);
-      console.log(response);
-      setDailyGoal(response.data.chartData[0].dailyGoal);
-    } catch (error) {
-      console.error("Error fetching chart data:", error);
-    } finally {
-      setChartLoading(false);
-    }
-  };
+    },
+    [dailyGoal]
+  );
 
-  const handleGoalChange = async (adjustment: number) => {
-    const newGoal = Math.max(30, Math.min(600, dailyGoal + adjustment));
-    setDailyGoal(newGoal);
-    await axios.post('/api/graphs', { goal : newGoal});
-  }
-
-  const minutesToStr = (time: number) => {
+  const minutesToStr = useCallback((time: number) => {
     const hours = time / 60;
+    return `${hours} hours`;
+  }, []);
 
-    return `${hours} hours`
-  }
-
-  const formatYAxis = (milliseconds: number) => {
+  const formatYAxis = useCallback((milliseconds: number) => {
     let timeStr = formatTime(milliseconds);
-    
+
     for (let i = 1; i < timeStr.length; i++) {
-      if (timeStr[i] === '0' && timeStr[i - 1] === '0') {
-        timeStr = timeStr.slice(0, i-2);
+      if (timeStr[i] === "0" && timeStr[i - 1] === "0") {
+        timeStr = timeStr.slice(0, i - 2);
+        break;
       }
     }
 
     return timeStr;
-  };
+  }, []);
 
-  const maxTime = Math.max(...chartData.map(data => data.totalTime));
-  const totalTime = chartData.reduce((acc, data) => acc + data.totalTime, 0);
-
-  const ticks = generateTicks(maxTime);
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {;
+  // Memoized tooltip component
+  const CustomTooltip = useCallback(({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const weeklyAverage = payload[0]?.payload?.weeklyAverage;
       return (
-        <div className="bg-gray-800 p-2 border border-gray-700 rounded">
-          <p className="text-white text-xs">{`Date: ${label}`}</p>
-          <p className="text-green-500 text-xs">{`Total: ${formatTime(payload[0].payload.totalTime)}`}</p>
+        <div className="bg-gray-800 p-3 border border-gray-700 rounded-md shadow-lg">
+          <p className="text-white text-xs font-semibold mb-1">{`Date: ${label}`}</p>
+          <p className="text-green-500 text-xs">{`Total: ${formatTime(
+            payload[0].payload.totalTime
+          )}`}</p>
+          {weeklyAverage !== undefined && (
+            <p className="text-orange-500 text-xs mt-1">{`Weekly Avg: ${formatTime(
+              weeklyAverage
+            )}`}</p>
+          )}
         </div>
       );
     }
     return null;
-  };
+  }, []);
 
   return (
-    <div className="h-full w-full">
-      <div className="flex gap-2">
-        <Select 
-          value={dropdownSelection} 
+    <div className="h-full w-full flex flex-col">
+      <div className="flex flex-col sm:flex-row gap-2 flex-wrap mb-4">
+        <Select
+          value={dropdownSelection}
           onValueChange={(value) => setDropdownSelection(value)}
         >
-          <SelectTrigger className="w-[170px] bg-gray-950 text-white">
+          <SelectTrigger className="w-full sm:w-[170px] bg-gray-950 text-white">
             <SelectValue placeholder="Last 30 days" />
           </SelectTrigger>
           <SelectContent className="bg-gray-950 text-white backdrop-blur-md">
@@ -334,7 +532,7 @@ const Graph = () => {
             <SelectItem value="30">Last 30 days</SelectItem>
             <SelectItem value="month">Current month</SelectItem>
             <SelectItem value="year">Current year</SelectItem>
-            <SelectItem value="custom">Custom interval</SelectItem>            
+            <SelectItem value="custom">Custom interval</SelectItem>
           </SelectContent>
         </Select>
 
@@ -344,37 +542,83 @@ const Graph = () => {
               id="date"
               variant="outline"
               className={cn(
-                "w-[300px] justify-start text-left font-normal text-white bg-gray-950 border-gray-700",
+                "w-full sm:w-[300px] justify-start text-left font-normal text-white bg-gray-950 border-gray-700",
                 !date && "text-muted-foreground"
               )}
-              disabled={!(dropdownSelection === "custom")}
+              onClick={() => {
+                if (dropdownSelection !== "custom") {
+                  setDropdownSelection("custom");
+                }
+              }}
             >
-              <CalendarIcon className="mr-2 h-4 w-4 text-white" />
-              {date?.from ? (
-                date.to ? (
-                  <>
-                    {format(date.from, "LLL dd, y")} -{" "}
-                    {format(date.to, "LLL dd, y")}
-                  </>
+              <CalendarIcon className="mr-2 h-4 w-4 text-white flex-shrink-0" />
+              <span className="truncate">
+                {date?.from ? (
+                  date.to ? (
+                    <>
+                      {format(date.from, "LLL dd, y")} -{" "}
+                      {format(date.to, "LLL dd, y")}
+                    </>
+                  ) : (
+                    format(date.from, "LLL dd, y")
+                  )
                 ) : (
-                  format(date.from, "LLL dd, y")
-                )
-              ) : (
-                <span>Pick a date</span>
-              )}
+                  <span>Pick a date</span>
+                )}
+              </span>
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 bg-gray-950 text-white" align="start">
+          <PopoverContent
+            className="w-auto p-0 bg-gray-950 text-white"
+            align="start"
+          >
             <Calendar
               initialFocus
               mode="range"
               defaultMonth={date?.from}
               selected={date}
               onSelect={(range) => {
-                if (range?.to) {
+                if (range?.from && range?.to) {
+                  // Convert to UTC dates
+                  const fromDate = new Date(range.from);
                   const toDate = new Date(range.to);
-                  toDate.setHours(23, 59, 59, 999); // Ensure the 'to' includes the whole day
-                  setDate({ from: range.from, to: toDate });
+                  const utcFrom = new Date(
+                    Date.UTC(
+                      fromDate.getFullYear(),
+                      fromDate.getMonth(),
+                      fromDate.getDate(),
+                      0,
+                      0,
+                      0,
+                      0
+                    )
+                  );
+                  const utcTo = new Date(
+                    Date.UTC(
+                      toDate.getFullYear(),
+                      toDate.getMonth(),
+                      toDate.getDate(),
+                      23,
+                      59,
+                      59,
+                      999
+                    )
+                  );
+                  setDate({ from: utcFrom, to: utcTo });
+                } else if (range?.from) {
+                  const fromDate = new Date(range.from);
+                  const utcFrom = new Date(
+                    Date.UTC(
+                      fromDate.getFullYear(),
+                      fromDate.getMonth(),
+                      fromDate.getDate(),
+                      0,
+                      0,
+                      0,
+                      0
+                    )
+                  );
+                  setDate({ from: utcFrom, to: undefined });
                 } else {
                   setDate(range);
                 }
@@ -383,18 +627,27 @@ const Graph = () => {
             />
           </PopoverContent>
         </Popover>
-        
+
         <Drawer>
           <DrawerTrigger asChild>
-            <Button variant="outline" className="text-green-400 ml-3 bg-gray-950 border-gray-700">
-              Daily Goal : {minutesToStr(dailyGoal)}
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto text-green-400 bg-gray-950 border-gray-700"
+            >
+              <span className="truncate">
+                Daily Goal: {minutesToStr(dailyGoal)}
+              </span>
             </Button>
           </DrawerTrigger>
           <DrawerContent className="bg-black text-white">
             <div className="mx-auto w-full max-w-sm">
               <DrawerHeader>
-                <DrawerTitle className="text-green-500">Daily Focus Goal</DrawerTitle>
-                <DrawerDescription>Set your daily focus goal.</DrawerDescription>
+                <DrawerTitle className="text-green-500">
+                  Daily Focus Goal
+                </DrawerTitle>
+                <DrawerDescription>
+                  Set your daily focus goal.
+                </DrawerDescription>
               </DrawerHeader>
               <div className="p-4 pb-0">
                 <div className="flex items-center justify-center space-x-2">
@@ -405,14 +658,16 @@ const Graph = () => {
                     onClick={() => handleGoalChange(-30)}
                     disabled={dailyGoal <= 30}
                   >
-                    <Minus className="h-4 w-4"/>
+                    <Minus className="h-4 w-4" />
                     <span className="sr-only">Decrease</span>
                   </Button>
                   <div className="flex-1 text-center">
                     <div className="text-6xl font-bold tracking-tighter">
                       {minutesToStr(dailyGoal)}
                     </div>
-                    <div className="text-[0.70rem] uppercase text-gray-400">Per day</div>
+                    <div className="text-[0.70rem] uppercase text-gray-400">
+                      Per day
+                    </div>
                   </div>
                   <Button
                     variant="outline"
@@ -421,7 +676,7 @@ const Graph = () => {
                     onClick={() => handleGoalChange(30)}
                     disabled={dailyGoal >= 600}
                   >
-                    <Plus className="h-4 w-4"/>
+                    <Plus className="h-4 w-4" />
                     <span className="sr-only">Increase</span>
                   </Button>
                 </div>
@@ -443,65 +698,76 @@ const Graph = () => {
                 <DrawerClose asChild>
                   <Button>Set Goal</Button>
                 </DrawerClose>
-              </DrawerFooter>          
+              </DrawerFooter>
             </div>
           </DrawerContent>
         </Drawer>
 
-        <span className="border p-2 ml-3 rounded-md text-sm text-white bg-gray-950 border-gray-700">
+        <span className="hidden sm:flex items-center border p-2 rounded-md text-sm text-white bg-gray-950 border-gray-700 whitespace-nowrap">
           Range Total: {Math.round(totalTime / 60000)} min
         </span>
       </div>
 
-      <div>
+      <div className="flex-1 min-h-[300px] sm:min-h-[400px]">
         {chartLoading ? (
           <div className="flex flex-col justify-center items-center h-full">
-            <div className="inline-block mt-[20%] w-8 h-8 rounded-full border-4 border-gray-950 border-t-transparent animate-spin">
+            <div className="inline-block w-8 h-8 rounded-full border-4 border-gray-950 border-t-transparent animate-spin">
               <LoaderCircle />
             </div>
             <div className="mt-2 text-white">Fetching the latest data</div>
           </div>
         ) : (
-          <ChartContainer config={chartConfig} className="h-full w-full bg-gray-950 text-white">
+          <ChartContainer
+            config={chartConfig}
+            className="h-full w-full bg-gray-950 text-white"
+          >
             <ComposedChart
-              data={chartData} 
-              margin={{ top: 20, right: 30, left: 30, bottom: 5 }}
+              data={chartData}
+              margin={{ top: 20, right: 10, left: 0, bottom: 5 }}
             >
-              <CartesianGrid vertical={false} stroke="#28272c"/>
-              <XAxis dataKey="date" tickLine={false} tickMargin={5} axisLine={false} />
+              <CartesianGrid vertical={false} stroke="#28272c" />
+              <XAxis
+                dataKey="date"
+                tickLine={false}
+                tickMargin={5}
+                axisLine={false}
+                tick={{ fontSize: 12 }}
+                angle={-45}
+                textAnchor="end"
+                height={80}
+              />
               <YAxis
                 tickFormatter={formatYAxis}
                 tickLine={false}
                 axisLine={false}
-                width={60}
+                width={70}
                 ticks={ticks}
+                tick={{ fontSize: 12 }}
               />
-              <Tooltip content={<CustomTooltip />} cursor = {false} /> {/*cursor is the thing that controls that background of bar on hover, but for some reason its 'fill' does not work anymore and i cannot find a replacement. the background goes white on hover in light mode so i am disabling it for now.*/}
+              <Tooltip content={<CustomTooltip />} cursor={false} />
               <ChartLegend content={<ChartLegendContent />} />
-              
               {Object.keys(chartConfig).map((key) => (
                 <Bar
                   key={key}
-                  dataKey={key} 
-                  stackId="a" 
-                  fill={chartConfig[key as keyof typeof chartConfig].color} 
+                  dataKey={key}
+                  stackId="a"
+                  fill={chartConfig[key as keyof typeof chartConfig].color}
                   radius={0}
-                  style={{ transition: 'fill 0.3s ease' }}
+                  style={{ transition: "fill 0.3s ease" }}
                 />
               ))}
-              <Line 
+              <Line
                 dataKey="weeklyAverage"
-                stroke = "#ff7300"
+                stroke="#ff7300"
                 strokeWidth={2}
-                dot = {false}
+                dot={false}
               />
             </ComposedChart>
           </ChartContainer>
         )}
       </div>
     </div>
-
   );
-}
- 
+};
+
 export default Graph;

@@ -211,7 +211,6 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
   }, [isRunning]);
 
   useEffect(() => {
-    console.log(activity);
   }, [activity]);
 
   return (

@@ -97,7 +97,6 @@ const RecentSessions = () => {
         duration: Number(newDuration) * 60000,
         activity,
       });
-      console.log("Log saved successfully:", response.data);
       setOpen(false);
     } catch (error) {
       //console.error("Error saving timer log:", error);

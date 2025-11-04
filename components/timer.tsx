@@ -269,7 +269,6 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   };
 
   const confirmStop = () => {
-    console.log("3", activity);
     stopTimer();
     setShowAlert(false);
   };

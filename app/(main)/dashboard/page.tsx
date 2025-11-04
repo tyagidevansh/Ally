@@ -22,7 +22,7 @@ const Dashboard = () => {
       <Navbar showToggle={false} />
       <div className="container mx-auto p-2 md:p-4 mt-10">
         <div className="grid md:grid-cols-[2fr,1fr] md:grid-rows-3 gap-4">
-          <DashboardBox className="hidden md:block row-span-2" style={{ minHeight: '75vh' }}>
+          <DashboardBox className="hidden md:block row-span-2" style={{ minHeight: '70vh' }}>
             <Graph />
           </DashboardBox>
 

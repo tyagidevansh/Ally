@@ -148,7 +148,6 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
     if (startTimeRef.current === null) return;
 
     const endTime = Date.now();
-    console.log("paused time: ", pausedTime);
     const duration = endTime - startTimeRef.current;
     try {
       await axios.post("/api/timer-log", {
