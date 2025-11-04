@@ -745,7 +745,7 @@ const Graph = () => {
                 tick={{ fontSize: 12 }}
               />
               <Tooltip content={<CustomTooltip />} cursor={false} />
-              <ChartLegend content={<ChartLegendContent />} />
+              {/* <ChartLegend content={<ChartLegendContent />} /> */}
               {Object.keys(chartConfig).map((key) => (
                 <Bar
                   key={key}
