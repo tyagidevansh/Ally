@@ -227,12 +227,14 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
   }, [activity]);
 
   return (
-    <div className="relative h-full w-full min-w-fit flex flex-col items-center select-none text-white overflow-y-auto">
-      <div className="flex flex-col items-center w-full pt-[8%] md:pt-[10%] pb-4">
-        <div className="flex flex-col items-center justify-center w-60 h-60 border-[5px] border-green-500 rounded-full mb-8">
+    <div className="h-full w-full flex flex-col items-center justify-center select-none text-white overflow-y-auto py-4 md:py-0">
+      <div className="flex flex-col items-center w-full gap-6">
+        {/* Stopwatch circle */}
+        <div className="flex flex-col items-center justify-center w-52 h-52 md:w-60 md:h-60 border-[5px] border-green-500 rounded-full shrink-0">
           <div className="text-4xl">{formatTime(elapsedTime)}</div>
         </div>
         
+        {/* Controls */}
         <div className="flex flex-col items-center w-full max-w-[350px]">
           <div className="mb-4 w-[40%]">
             {isRunningLocal ? (
@@ -306,7 +308,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                 </Select>
               </div>
               
-              <div className="text-zinc-100 mt-6 md:mt-12 text-center text-lg">
+              <div className="text-zinc-100 mt-8 text-center text-lg">
                 Focused {formatTimeForDaily(studyTimeToday)} today
               </div>
             </>
@@ -319,3 +321,4 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
 };
 
 export default Stopwatch;
+

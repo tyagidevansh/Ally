@@ -537,12 +537,12 @@ const Graph = () => {
 
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="flex flex-col sm:flex-row gap-2 flex-wrap mb-4">
+      <div className="flex flex-row gap-2 flex-nowrap mb-4">
         <Select
           value={dropdownSelection}
           onValueChange={(value) => setDropdownSelection(value)}
         >
-          <SelectTrigger className="w-full sm:w-[170px] bg-gray-950 text-white">
+          <SelectTrigger className="w-[170px] bg-gray-950 text-white">
             <SelectValue placeholder="Last 30 days" />
           </SelectTrigger>
           <SelectContent className="bg-gray-950 text-white backdrop-blur-md">
@@ -562,11 +562,11 @@ const Graph = () => {
               id="date"
               variant="outline"
               className={cn(
-                "w-full sm:w-[300px] justify-start text-left font-normal text-white bg-gray-950 border-gray-700",
+                "w-[300px] justify-start text-left font-normal text-white bg-gray-950 border-gray-700",
                 !date && "text-muted-foreground"
               )}
-              onClick={() => {
-                if (dropdownSelection !== "custom") {
+              onPointerDown={(e) => {
+                if (e.button === 0 && dropdownSelection !== "custom") {
                   setDropdownSelection("custom");
                 }
               }}
@@ -652,7 +652,7 @@ const Graph = () => {
           <DrawerTrigger asChild>
             <Button
               variant="outline"
-              className="w-full sm:w-auto text-green-400 bg-gray-950 border-gray-700"
+              className="w-auto text-green-400 bg-gray-950 border-gray-700"
             >
               <span className="truncate">
                 Daily Goal: {minutesToStr(dailyGoal)}
@@ -723,7 +723,7 @@ const Graph = () => {
           </DrawerContent>
         </Drawer>
 
-        <span className="hidden sm:flex items-center border p-2 rounded-md text-sm text-white bg-gray-950 border-gray-700 whitespace-nowrap">
+        <span className="hidden md:flex items-center border p-2 rounded-md text-sm text-white bg-gray-950 border-gray-700 whitespace-nowrap">
           Range Total: {Math.round(totalTime / 60000)} min
         </span>
       </div>

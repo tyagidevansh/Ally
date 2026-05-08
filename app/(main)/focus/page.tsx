@@ -84,6 +84,7 @@ const Home = () => {
 
   return (
     <div className="h-[100dvh] flex flex-col relative overflow-hidden">
+      {/* Background slider */}
       <div className="absolute inset-0 z-0">
         <Slider ref={sliderRef} {...settings}>
           {environments.map((env, index) => (
@@ -102,23 +103,28 @@ const Home = () => {
         </Slider>
       </div>
       <div className="absolute inset-0 bg-black opacity-20 z-10"></div>
+
+      {/* Main content layer */}
       <div className="relative z-20 flex flex-col h-full">
         <Navbar showToggle={false}/>
         
-        {/* Desktop: grid layout (unchanged). Mobile: flex-col with proper spacing */}
-        <div className="flex-1 min-h-0 md:grid md:grid-cols-10 flex flex-col p-4">
-          {/* Timer panel: on mobile takes available space, on desktop spans 3 cols */}
-          <div className="md:col-span-3 flex-1 min-h-0 md:flex-none row-auto md:ml-10 mt-4 md:mt-16 md:bg-white/10 rounded-xl md:backdrop-blur-md">
-            {renderComponent()}
+        <div className="flex-1 min-h-0 flex flex-col md:grid md:grid-cols-10 px-4 pt-14 pb-2 md:py-4">
+          
+          {/* Desktop: column acts as flex container to vertically center the panel. 
+               The panel itself is auto-height so the dark box wraps content tightly. */}
+          <div className="md:col-span-3 flex-1 min-h-0 md:flex md:flex-col md:justify-center md:ml-10 md:mt-0 overflow-hidden">
+            <div className="md:bg-white/10 rounded-xl md:backdrop-blur-md md:py-8">
+              {renderComponent()}
+            </div>
           </div>
 
-          <div className="hidden md:block col-span-5 mt-auto ml-36 p-4">
-            <p className="text-white text-center text-xl">"{quote}"</p>
+          <div className="hidden md:flex col-span-5 items-end justify-center pb-6">
+            <p className="text-white text-center text-xl italic opacity-90">"{quote}"</p>
           </div>
           
-          {/* Music controls: on mobile, fixed at bottom with no overlap */}
-          <div className="flex-shrink-0 py-3 z-30 md:static md:top-32 md:mt-10 md:left-10 md:right-auto md:bg-transparent">
-            <div className="flex flex-row items-center justify-center gap-4 md:justify-start">
+          {/* Music / environment controls */}
+          <div className="flex-shrink-0 py-2 md:py-0 md:col-span-2 md:flex md:items-start md:justify-end md:mt-16 md:mr-4">
+            <div className="flex flex-row items-center justify-center gap-4">
               <Button 
                 onClick={() => sliderRef.current.slickPrev()} 
                 className="bg-white/10 backdrop-blur-md text-white hover:bg-white/30 h-12 w-12 flex items-center justify-center"

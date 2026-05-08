@@ -282,11 +282,13 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
   const offset = circumference - (percentage / 100) * circumference;
 
   return (
-    <div className='relative h-full flex flex-col items-center select-none text-white overflow-y-auto'>
-      <div className='flex flex-col items-center w-full pt-[8%] md:pt-[10%] pb-4'>
-        <div className='relative w-60 h-60 mb-8'>
+    <div className='h-full w-full flex flex-col items-center justify-center select-none text-white overflow-y-auto py-4 md:py-0'>
+      <div className='flex flex-col items-center w-full gap-6'>
+        {/* Pomodoro circle */}
+        <div className='relative w-52 h-52 md:w-60 md:h-60 shrink-0'>
           <svg
             className='w-full h-full transform -rotate-90 cursor-pointer'
+            viewBox="0 0 240 240"
             ref={svgRef}
           >
             <circle
@@ -297,7 +299,6 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
               opacity={0.3}
               strokeWidth="5"
               fill="transparent"
-              className="w-60 h-60"
             /> 
             <circle 
               cx="120"
@@ -308,16 +309,16 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
               fill="transparent"
               strokeDasharray={circumference}
               strokeDashoffset={offset}
-              className="w-60 h-60"
             />
           </svg>
           <div className='absolute inset-0 flex flex-col items-center justify-center'>
-            <div id='time-display' className='text-4xl font-bold mt-2'>{formatTime(timerState?.raw ?? 1500)}</div>
-            <div id = 'status-display' className='text-2xl font-bold mt-2'>{timerState?.status === "work" ? "Focus" :( timerState?.status === "break" ? "Break" : "Focus")}</div>
-            <div className='text-lg mt-2'>Interval {intervalsRemaining}</div>
+            <div id='time-display' className='text-4xl font-bold'>{formatTime(timerState?.raw ?? 1500)}</div>
+            <div id='status-display' className='text-2xl font-bold mt-1'>{timerState?.status === "work" ? "Focus" :( timerState?.status === "break" ? "Break" : "Focus")}</div>
+            <div className='text-lg mt-1'>Interval {intervalsRemaining}</div>
           </div>
         </div>
 
+        {/* Controls */}
         <div className="flex flex-col items-center w-full max-w-[350px]">
           <div className="mb-4 w-[40%] text-white">
             <AnimatePresence mode="wait">
@@ -427,7 +428,7 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
           </Select>
         </div>
 
-        <div className="text-zinc-100 mt-6 md:mt-12 text-center text-lg">
+        <div className="text-zinc-100 mt-8 text-center text-lg">
           Focused {formatTimeForDaily(studyTimeToday)} today
         </div>
       </div>

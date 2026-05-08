@@ -224,24 +224,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   const circumference = 2 * Math.PI * 118;
   const offset = circumference - (percentage / 100) * circumference;
 
-  const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!isRunningLocal) {
-      setIsDragging(true);
-      updateTime(event);
-    }
-  };
-
-  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (isDragging && !isRunningLocal) {
-      updateTime(event);
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const updateTime = (event: React.MouseEvent<HTMLDivElement>) => {
+  const updateTimeFromCoords = (clientX: number, clientY: number) => {
     const svg = svgRef.current;
     if (!svg) return;
 
@@ -249,10 +232,10 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
 
-    const mouseX = event.clientX - centerX;
-    const mouseY = event.clientY - centerY;
+    const dx = clientX - centerX;
+    const dy = clientY - centerY;
 
-    let angle = Math.atan2(mouseY, mouseX);
+    let angle = Math.atan2(dy, dx);
     if (angle < 0) angle += 2 * Math.PI;
 
     let percentage = (-angle / (2 * Math.PI)) * 100; //angle negative to correct for direction
@@ -266,20 +249,71 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     selectedTimeRef.current = newTime;
   };
 
+
+  const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!isRunningLocal) {
+      setIsDragging(true);
+      updateTimeFromCoords(event.clientX, event.clientY);
+    }
+  };
+
+  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (isDragging && !isRunningLocal) {
+      updateTimeFromCoords(event.clientX, event.clientY);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Touch handlers for mobile drag support
+  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (!isRunningLocal && event.touches.length > 0) {
+      event.preventDefault();
+      setIsDragging(true);
+      const touch = event.touches[0];
+      updateTimeFromCoords(touch.clientX, touch.clientY);
+    }
+  };
+
+  const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (isDragging && !isRunningLocal && event.touches.length > 0) {
+      event.preventDefault();
+      const touch = event.touches[0];
+      updateTimeFromCoords(touch.clientX, touch.clientY);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
   useEffect(() => {
     const handleGlobalMouseUp = () => setIsDragging(false);
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (isDragging && !isRunningLocal && svgRef.current) {
-        updateTime(e as unknown as React.MouseEvent<HTMLDivElement>);
+        updateTimeFromCoords(e.clientX, e.clientY);
+      }
+    };
+    const handleGlobalTouchEnd = () => setIsDragging(false);
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (isDragging && !isRunningLocal && svgRef.current && e.touches.length > 0) {
+        e.preventDefault();
+        updateTimeFromCoords(e.touches[0].clientX, e.touches[0].clientY);
       }
     };
 
     document.addEventListener('mouseup', handleGlobalMouseUp);
     document.addEventListener('mousemove', handleGlobalMouseMove);
+    document.addEventListener('touchend', handleGlobalTouchEnd);
+    document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
 
     return () => {
       document.removeEventListener('mouseup', handleGlobalMouseUp);
       document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('touchend', handleGlobalTouchEnd);
+      document.removeEventListener('touchmove', handleGlobalTouchMove);
     };
   }, [isDragging, isRunningLocal]);
 
@@ -313,15 +347,19 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   }, [isRunningLocal]);
 
   return (
-  <div className="relative h-full flex flex-col items-center select-none text-white w-full overflow-y-auto">
-    <div className="flex flex-col items-center w-full pt-[8%] md:pt-[10%] pb-4">
+  <div className="h-full w-full flex flex-col items-center justify-center select-none text-white overflow-y-auto py-4 md:py-0">
+    <div className="flex flex-col items-center w-full gap-6">
+      {/* Timer circle */}
       <div
-        className="relative w-60 h-60 mb-8"
+        className="relative w-52 h-52 md:w-60 md:h-60 shrink-0 touch-none"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
-        <svg className="w-full h-full transform -rotate-90 cursor-pointer" ref={svgRef}>
+        <svg className="w-full h-full transform -rotate-90 cursor-pointer" viewBox="0 0 240 240" ref={svgRef}>
           <circle
             cx="120"
             cy="120"
@@ -330,7 +368,6 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
             opacity={0.3}
             strokeWidth="5"
             fill="transparent"
-            className="w-60 h-60"
           />
           <circle
             cx="120"
@@ -341,7 +378,6 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
             fill="transparent"
             strokeDasharray={circumference}
             strokeDashoffset={offset}
-            className="w-60 h-60"
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
@@ -349,6 +385,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
         </div>
       </div>
 
+      {/* Controls */}
       <div className="flex flex-col items-center w-full max-w-[350px]">
         <div className="mb-4 w-[40%]">
           {isRunningLocal ? (
@@ -421,7 +458,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
           </Select>
         </div>
 
-        <div className="text-zinc-100 mt-6 md:mt-12 text-center text-lg">
+        <div className="text-zinc-100 mt-8 text-center text-lg">
           Focused {formatTimeForDaily(studyTimeToday)} today
         </div>
       </div>
