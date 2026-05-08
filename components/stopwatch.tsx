@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useBackgroundTimer } from "@/hooks/use-background-timer";
 import { Button } from "./ui/button";
 import axios from "axios";
 import { useRouter} from "next/navigation";
@@ -81,6 +82,18 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
       setElapsedTime(elapsedTime);
     }
   }, []);
+
+  // Recalculate elapsed time and update title when tab becomes visible (mobile background recovery)
+  const handleBackgroundTick = useCallback(() => {
+    if (startTimeRef.current !== null) {
+      const elapsedTime = Date.now() - startTimeRef.current;
+      setElapsedTime(elapsedTime);
+      document.title = `${formatTime(elapsedTime)} | Ally`;
+    }
+  }, []);
+
+  // This hook handles mobile background recovery via visibilitychange + fallback interval
+  useBackgroundTimer(isRunningLocal, handleBackgroundTick, 1000);
 
   const startTimer = useCallback(() => {
     const startTime = Date.now();

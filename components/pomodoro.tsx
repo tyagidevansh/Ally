@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Button } from './ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import useTimerStore from '@/store/timerStore';
 import { useTimerCommunication } from '@/lib/timer-communication';
+import { useBackgroundTimer } from '@/hooks/use-background-timer';
 
 const Timer = require('timer-for-pomodoro');
 
@@ -69,6 +70,13 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
       });
       setIntervalsRemaining(21 - currentTime.rounds);
 
+      // Update document title while running
+      if (isRunningLocal) {
+        const mins = Math.floor(currentTime.timeRaw / 60);
+        const secs = currentTime.timeRaw % 60;
+        document.title = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')} | Ally`;
+      }
+
       if (lastStatusRef.current === 'work' && currentTime.status === 'break') {
         logWorkTime();
       } else if (lastStatusRef.current === 'break' && currentTime.status === 'work') {
@@ -113,6 +121,19 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
     setIsPaused(false);
     startTimeRef.current = Date.now();
   };
+
+  // Pomodoro background recovery: force a UI update when tab becomes visible
+  // The timer-for-pomodoro library may have paused internally, but at minimum
+  // we ensure the displayed time catches up and document.title is updated
+  const handleBackgroundTick = useCallback(() => {
+    if (timerState) {
+      const mins = Math.floor(timerState.raw / 60);
+      const secs = timerState.raw % 60;
+      document.title = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')} | Ally`;
+    }
+  }, [timerState]);
+
+  useBackgroundTimer(isRunningLocal && !isPaused, handleBackgroundTick, 1000);
 
   const confirmStop = () => {
     setShowAlert(true);

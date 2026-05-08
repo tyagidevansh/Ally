@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback} from "react";
+import { useBackgroundTimer } from "@/hooks/use-background-timer";
 import { Button } from "./ui/button";
 import axios from "axios";
 import { useRouter } from "next/navigation";
@@ -93,6 +94,24 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
       }
     }
   }, [activity]);
+
+  // Recalculate time and update title when tab becomes visible (mobile background recovery)
+  const handleBackgroundTick = useCallback(() => {
+    if (startTimeRef.current !== null) {
+      const elapsedTime = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      const newTimeLeft = Math.max(0, selectedTimeRef.current - elapsedTime);
+      setTimeLeft(newTimeLeft);
+      document.title = `${formatTime(newTimeLeft)} | Ally`;
+
+      if (newTimeLeft === 0) {
+        stopTimer();
+        sendNotification("Timer completed!", {body: "Restart the timer if you want to keep going", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
+      }
+    }
+  }, [activity]);
+
+  // This hook handles mobile background recovery via visibilitychange + fallback interval
+  useBackgroundTimer(isRunningLocal, handleBackgroundTick, 1000);
   
   const startTimer = useCallback(() => {
     startTimeRef.current = Date.now();
