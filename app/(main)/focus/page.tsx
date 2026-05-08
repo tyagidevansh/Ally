@@ -83,11 +83,11 @@ const Home = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col relative overflow-auto md:overflow-hidden">
+    <div className="h-[100dvh] flex flex-col relative overflow-hidden">
       <div className="absolute inset-0 z-0">
         <Slider ref={sliderRef} {...settings}>
           {environments.map((env, index) => (
-            <div key={index} className="h-screen">
+            <div key={index} className="h-[100dvh]">
               <div
                 className="absolute inset-0"
                 style={{
@@ -105,8 +105,10 @@ const Home = () => {
       <div className="relative z-20 flex flex-col h-full">
         <Navbar showToggle={false}/>
         
-        <div className="flex-1 md:grid md:grid-cols-10 flex flex-col p-4">
-          <div className="md:col-span-3 row-auto md:ml-10 mt-16 md:bg-white/10 rounded-xl md:backdrop-blur-md">
+        {/* Desktop: grid layout (unchanged). Mobile: flex-col with proper spacing */}
+        <div className="flex-1 min-h-0 md:grid md:grid-cols-10 flex flex-col p-4">
+          {/* Timer panel: on mobile takes available space, on desktop spans 3 cols */}
+          <div className="md:col-span-3 flex-1 min-h-0 md:flex-none row-auto md:ml-10 mt-4 md:mt-16 md:bg-white/10 rounded-xl md:backdrop-blur-md">
             {renderComponent()}
           </div>
 
@@ -114,7 +116,8 @@ const Home = () => {
             <p className="text-white text-center text-xl">"{quote}"</p>
           </div>
           
-          <div className="relative mt-auto bottom-0 left-0 right-0 p-4 z-30 md:static md:top-32 md:mt-10 md:left-10 md:right-auto md:bg-transparent">
+          {/* Music controls: on mobile, fixed at bottom with no overlap */}
+          <div className="flex-shrink-0 py-3 z-30 md:static md:top-32 md:mt-10 md:left-10 md:right-auto md:bg-transparent">
             <div className="flex flex-row items-center justify-center gap-4 md:justify-start">
               <Button 
                 onClick={() => sliderRef.current.slickPrev()} 

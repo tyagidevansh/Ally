@@ -227,8 +227,8 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
   }, [activity]);
 
   return (
-    <div className="relative h-full w-full min-w-fit flex flex-col items-center select-none text-white">
-      <div className="absolute top-[10%] flex flex-col items-center w-full">
+    <div className="relative h-full w-full min-w-fit flex flex-col items-center select-none text-white overflow-y-auto">
+      <div className="flex flex-col items-center w-full pt-[8%] md:pt-[10%] pb-4">
         <div className="flex flex-col items-center justify-center w-60 h-60 border-[5px] border-green-500 rounded-full mb-8">
           <div className="text-4xl">{formatTime(elapsedTime)}</div>
         </div>
@@ -306,7 +306,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
                 </Select>
               </div>
               
-              <div className="text-zinc-100 mt-12 text-center text-lg">
+              <div className="text-zinc-100 mt-6 md:mt-12 text-center text-lg">
                 Focused {formatTimeForDaily(studyTimeToday)} today
               </div>
             </>

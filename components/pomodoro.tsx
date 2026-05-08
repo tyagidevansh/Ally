@@ -282,8 +282,8 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
   const offset = circumference - (percentage / 100) * circumference;
 
   return (
-    <div className='relative h-full flex flex-col items-center select-none text-white'>
-      <div className='absolute top-[10%] flex flex-col items-center w-full'>
+    <div className='relative h-full flex flex-col items-center select-none text-white overflow-y-auto'>
+      <div className='flex flex-col items-center w-full pt-[8%] md:pt-[10%] pb-4'>
         <div className='relative w-60 h-60 mb-8'>
           <svg
             className='w-full h-full transform -rotate-90 cursor-pointer'
@@ -427,7 +427,7 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
           </Select>
         </div>
 
-        <div className="text-zinc-100 mt-12 text-center text-lg">
+        <div className="text-zinc-100 mt-6 md:mt-12 text-center text-lg">
           Focused {formatTimeForDaily(studyTimeToday)} today
         </div>
       </div>
