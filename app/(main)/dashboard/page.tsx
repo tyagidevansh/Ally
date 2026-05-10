@@ -1,14 +1,14 @@
 'use client';
 
 import Navbar from "@/components/navbar";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, } from "react";
 import Graph from "@/components/graph";
 import RecentSessions from "@/components/recent-sessions";
 import FocusTrend from "@/components/focused-time-comparison";
 import CurrentStreak from "@/components/current-streak";
 import BestHours from "@/components/best-hours";
-import ToDoList from "@/components/todo";
-import { Smartphone } from "lucide-react";
+import HabitBuilder from "@/components/todo";
+import FriendsStats from "@/components/friends-stats";
 
 const DashboardBox = ({ children, className = "", style }: { children: ReactNode, className?: string, style?: React.CSSProperties }) => (
   <div className={`border border-gray-700 rounded-lg p-4 transition-all duration-300 hover:bg-gray-900 hover:border-green-500 ${className}`} style={style}>
@@ -29,23 +29,28 @@ const Dashboard = () => {
             </div>
           </DashboardBox>
 
-          <DashboardBox className="md:row-span-1 w-full min-h-[35vh]">
-            <FocusTrend />
-          </DashboardBox>
+          <div className="flex flex-col gap-4 md:row-span-3 w-full">
+            <DashboardBox className="w-full">
+              <FocusTrend />
+            </DashboardBox>
 
-          {/* Todo list — on mobile pushed to bottom via order, on desktop auto-flows to col 2 rows 2-3 */}
-          <DashboardBox className="order-last md:order-none md:row-span-2 w-full max-h-[60vh] min-h-[35vh] md:max-h-none">
-            <ToDoList />
-          </DashboardBox>
+            <DashboardBox className="w-full overflow-hidden" style={{ maxHeight: '40vh' }}>
+              <FriendsStats />
+            </DashboardBox>
+
+            <DashboardBox className="w-full flex-1 min-h-[30vh] overflow-hidden" style={{ maxHeight: '45vh' }}>
+              <HabitBuilder />
+            </DashboardBox>
+          </div>
 
           <div className="grid md:grid-cols-3 gap-4 md:row-span-1">
-            <DashboardBox className="w-full min-h-[40vh]">
+            <DashboardBox className="w-full h-full">
               <RecentSessions />
             </DashboardBox>
-            <DashboardBox className="w-full min-h-[40vh]">
+            <DashboardBox className="w-full h-full">
               <BestHours />
             </DashboardBox>
-            <DashboardBox className="w-full min-h-[35vh]">
+            <DashboardBox className="w-full h-full">
               <CurrentStreak />
             </DashboardBox>
           </div>

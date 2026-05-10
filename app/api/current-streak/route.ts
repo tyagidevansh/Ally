@@ -47,6 +47,14 @@ export async function GET(req: Request) {
     todayTime /= 60000;
     yesterdayTime /= 60000;
 
+    // Check if all of today's habits are completed
+    const todayTodos = await db.toDo.findMany({
+      where: { profileId: profile.id },
+    });
+    const todayHabitCount = todayTodos.length;
+    const completedHabitCount = todayTodos.filter((t: any) => t.isCompleted).length;
+    const allHabitsDone = todayHabitCount > 0 && completedHabitCount === todayHabitCount;
+
     return NextResponse.json({
       streakStartDate: profile.streakStart || Date.now(),
       streakLastDate: profile.streakLast || Date.now(),
@@ -54,6 +62,9 @@ export async function GET(req: Request) {
       todayTime,
       yesterdayTime,
       dailyGoal: profile.dailyGoal,
+      allHabitsDone,
+      todayHabitCount,
+      completedHabitCount,
     });
 
   } catch (error) {

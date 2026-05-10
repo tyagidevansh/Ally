@@ -8,6 +8,9 @@ interface StreakData {
   todayTime: number;
   yesterdayTime: number;
   dailyGoal: number;
+  allHabitsDone: boolean;
+  todayHabitCount: number;
+  completedHabitCount: number;
 }
 
 interface PostStreakData {
@@ -39,15 +42,18 @@ const CurrentStreak = () => {
   }, []);
 
   const calculateStreak = (data: StreakData) => {
-    const { streakStartDate, streakLastDate, todayTime, dailyGoal, bestStreak } = data;
+    const { streakStartDate, streakLastDate, todayTime, dailyGoal, bestStreak, allHabitsDone } = data;
     const today = new Date().setHours(0, 0, 0, 0);
     const streakStart = new Date(streakStartDate).setHours(0, 0, 0, 0);
     const streakLast = new Date(streakLastDate).setHours(0, 0, 0, 0);
 
+    // Day is complete only when focus goal is met AND all habits are done
+    const dayComplete = todayTime >= dailyGoal && allHabitsDone;
+
     let currentStreak = 0;
 
     if (streakStart === today && streakLast === today) {
-      if (todayTime >= dailyGoal) {
+      if (dayComplete) {
         currentStreak = 1;
       }
     } 
@@ -55,7 +61,7 @@ const CurrentStreak = () => {
       const daysBetween = Math.floor((streakLast - streakStart) / (1000 * 60 * 60 * 24));
       currentStreak = daysBetween + 1;
 
-      if (todayTime >= dailyGoal) {
+      if (dayComplete) {
         updateStreakData({
           streakLast: Date.now(),
         });

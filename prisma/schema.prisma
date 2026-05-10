@@ -23,6 +23,8 @@ model Profile {
   Journal     Journal[]
   TimerLog    TimerLog[]
   ToDo        ToDo[]
+  sentFriendRequests     Friendship[] @relation("SentFriendships")
+  receivedFriendRequests Friendship[] @relation("ReceivedFriendships")
 }
 
 model TimerLog {
@@ -56,4 +58,17 @@ model Journal {
   nutrition  Int?     @default(3) @db.SmallInt
   sleep      Int?     @default(3) @db.SmallInt
   Profile    Profile  @relation(fields: [profileId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model Friendship {
+  id        String   @id @default(uuid())
+  user1Id   String
+  user2Id   String
+  status    String   @default("PENDING") // PENDING, ACCEPTED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user1     Profile  @relation("SentFriendships", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2     Profile  @relation("ReceivedFriendships", fields: [user2Id], references: [id], onDelete: Cascade)
+
+  @@unique([user1Id, user2Id])
 }
