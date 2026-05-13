@@ -87,7 +87,8 @@ export async function GET(req: Request) {
         email: friend.email,
         focusedTimeToday,
         goalsHitToday,
-        streak: currentStreak
+        streak: currentStreak,
+        isFocusing: friend.isFocusing,
       };
     });
 

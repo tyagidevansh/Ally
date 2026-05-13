@@ -10,6 +10,7 @@ interface FriendStat {
   focusedTimeToday: number;
   goalsHitToday: number;
   streak: number;
+  isFocusing: boolean;
 }
 
 interface FriendRequest {
@@ -169,7 +170,14 @@ const FriendsStats = () => {
           <div className="space-y-3">
             {friends.map(friend => (
               <div key={friend.id} className="bg-gray-800 p-3 rounded-lg border border-gray-700">
-                <h4 className="font-semibold text-gray-100 mb-2">{friend.name}</h4>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold text-gray-100">{friend.name}</h4>
+                  {friend.isFocusing && (
+                    <span className="bg-green-500/20 text-green-500 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      Currently Focused
+                    </span>
+                  )}
+                </div>
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div className="flex flex-col items-center justify-center p-2 bg-gray-900 rounded border border-gray-700/50">
                     <Clock size={14} className="text-blue-400 mb-1" />

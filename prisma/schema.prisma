@@ -25,6 +25,8 @@ model Profile {
   ToDo        ToDo[]
   sentFriendRequests     Friendship[] @relation("SentFriendships")
   receivedFriendRequests Friendship[] @relation("ReceivedFriendships")
+  isFocusing  Boolean    @default(false)
+  lastTodoReset DateTime @default(now())
 }
 
 model TimerLog {

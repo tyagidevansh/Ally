@@ -148,12 +148,28 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
 }, [router, activity, setRunningCount, broadcastTimerUpdate]);
 
   useEffect(() => {
-    if (runningCount <= 0) {
-      setIsRunning(false);
-    } else {
-      setIsRunning(true);
-    }
+    const isNowRunning = runningCount > 0;
+    setIsRunning(isNowRunning);
   }, [runningCount, setIsRunning]);
+
+  const resetAbandonedTimer = useCallback(() => {
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
+    }
+    const currentRunningCount = useTimerStore.getState().runningCount;
+    setRunningCount(Math.max(0, currentRunningCount - 1));
+    broadcastTimerUpdate();
+    setIsRunningLocal(false);
+    setElapsedTime(0);
+    startTimeRef.current = null;
+    document.title = "Ally";
+  }, [setRunningCount, broadcastTimerUpdate]);
+
+  useEffect(() => {
+    if (isRunningLocal && elapsedTime >= 5 * 60 * 60 * 1000) {
+      resetAbandonedTimer();
+    }
+  }, [elapsedTime, isRunningLocal, resetAbandonedTimer]);
 
 
   useEffect(() => {

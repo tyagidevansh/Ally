@@ -8,6 +8,7 @@ import useTimerStore from "@/store/timerStore";
 import { ModeToggle } from './mode-toggle';
 import { useTheme } from 'next-themes';
 import { Button } from './ui/button';
+import axios from 'axios';
 
 interface NavbarProps {
   showToggle: boolean;
@@ -36,6 +37,18 @@ const Navbar = ({ showToggle }: NavbarProps) => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, [scrolled]);
+
+  useEffect(() => {
+    const isNowRunning = runningCount > 0;
+    const syncFocusStatus = async () => {
+      try {
+        await axios.put("/api/profile/focus", { isFocusing: isNowRunning });
+      } catch (error) {
+        console.error("Failed to sync focus status:", error);
+      }
+    };
+    syncFocusStatus();
+  }, [runningCount]);
 
   const getLogoSrc = () => {
     if (showToggle) {
