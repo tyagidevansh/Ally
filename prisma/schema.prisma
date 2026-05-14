@@ -36,6 +36,7 @@ model TimerLog {
   endTime   DateTime
   duration  Int
   activity  String
+  tag       String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   profile   Profile  @relation(fields: [profileId], references: [id])

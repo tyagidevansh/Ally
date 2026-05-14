@@ -23,10 +23,12 @@ export async function GET(req: Request) {
     });
 
     const formattedLogs = recentLogs.map(log => ({
+      id: log.id,
       startTime: log.startTime,
       endTime: log.endTime,
       activity: log.activity,
       duration: log.duration,
+      tag: log.tag,
     }));
 
     return NextResponse.json({ success: "recent times", logs: formattedLogs });

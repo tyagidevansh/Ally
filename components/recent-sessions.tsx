@@ -1,6 +1,6 @@
 'use client';
 
-import { PlusCircle, Clock } from 'lucide-react';
+import { PlusCircle, Clock, Tag, LoaderCircle } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -16,6 +16,7 @@ interface Session {
   endTime: string;
   activity: string;
   duration: number;
+  tag?: string;
 }
 
 const formatTime = (time: number) => {
@@ -42,6 +43,12 @@ const RecentSessions = () => {
   const [newDuration, setNewDuration] = useState<number>(30);
   const [error, setError] = useState<String>("");
   const [activity, setActivity] = useState("Study");
+
+  const [tagModalOpen, setTagModalOpen] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [tagInput, setTagInput] = useState("");
+  const [isSavingLog, setIsSavingLog] = useState(false);
+  const [isSavingTag, setIsSavingTag] = useState(false);
 
   const { data: sessions = [], isLoading: loading } = useQuery<Session[]>({
     queryKey: ['recent-sessions'],
@@ -80,7 +87,7 @@ const RecentSessions = () => {
   const handleNewLog = async () => {
     const startTime = constructStartTime();
     const endTime = new Date(startTime.getTime() + newDuration * 60000); // Calculate end time
-  
+    setIsSavingLog(true);
     try {
       const response = await axios.post("/api/timer-log", {
         startTime: startTime.toISOString(),
@@ -96,18 +103,37 @@ const RecentSessions = () => {
       setOpen(false);
     } catch (error) {
       //console.error("Error saving timer log:", error);
+    } finally {
+      setIsSavingLog(false);
     }
   };
-  
+
+  const handleSaveTag = async () => {
+    if (!selectedSessionId) return;
+    setIsSavingTag(true);
+    try {
+      await axios.put('/api/timer-log/tag', {
+        id: selectedSessionId,
+        tag: tagInput,
+      });
+      queryClient.invalidateQueries({ queryKey: ['recent-sessions'] });
+      setTagModalOpen(false);
+      setTagInput("");
+    } catch (error) {
+      console.error("Error saving tag:", error);
+    } finally {
+      setIsSavingTag(false);
+    }
+  };
 
   if (loading) {
     return <div className="text-white">Loading...</div>;
   }
 
   return (
-    <div className="h-full w-full custom-scrollbar overflow-y-auto" style={{ maxHeight: 'calc(100vh / 3)' }}>
-      <div className="flex flex-row justify-between items-center">
-        <h2 className="text-xl font-bold mb-4 text-green-500">Recent Sessions</h2>
+    <div className="h-full w-full flex flex-col" style={{ maxHeight: 'calc(100vh / 3)' }}>
+      <div className="flex flex-row justify-between items-center mb-2">
+        <h2 className="text-xl font-bold text-green-500">Recent Sessions</h2>
         
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -212,8 +238,9 @@ const RecentSessions = () => {
               <Button 
                 className="bg-green-600 text-white border border-green-500 hover:bg-green-500"
                 onClick = {handleNewLog}  
-                disabled = {error.length > 0}
+                disabled = {error.length > 0 || isSavingLog}
               >
+                {isSavingLog ? <LoaderCircle className="w-4 h-4 mr-2 animate-spin" /> : null}
                 Add Log
               </Button>
             </DialogFooter>
@@ -222,29 +249,96 @@ const RecentSessions = () => {
 
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3 custom-scrollbar overflow-y-auto pr-2 flex-1 min-h-0 relative">
         {sessions.length === 0 ? (
           <p className="text-white">No recent sessions available.</p>
         ) : (
           sessions.map((session) => (
-            <div key={session.id} className="bg-black p-3 rounded-md">
-            <p className="text-white flex justify-between">
-              {session.activity}
-              <span className="text-sm text-gray-400">
-                {new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} - 
-                {new Date(session.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
-              </span>
-            </p>
-            <p className="text-white flex justify-between">
-              {formatTime(session.duration)}
-              <span className="text-sm text-gray-400">
-                {new Date(session.startTime).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}
-              </span>
-            </p>
+            <div 
+              key={session.id} 
+              className="bg-black p-3 rounded-md relative group flex flex-col transition-colors hover:bg-gray-700"
+              title={session.tag ? `Tag: ${session.tag}` : undefined}
+            >
+              <div className="flex justify-between items-center">
+                <div className="text-white flex gap-2 items-center">
+                  <p>{session.activity}</p>
+                  {/* Tag button that appears on hover */}
+                  <button 
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-gray-800 rounded-md hover:bg-gray-700 text-gray-300"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedSessionId(session.id);
+                      setTagInput(session.tag || "");
+                      setTagModalOpen(true);
+                    }}
+                  >
+                    <Tag className="w-3 h-3" />
+                  </button>
+                </div>
+                <span className="text-sm text-gray-400">
+                  {new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} - 
+                  {new Date(session.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                </span>
+              </div>
+              
+              <div className="flex justify-between items-center mt-1">
+                <p className="text-white">
+                  {formatTime(session.duration)}
+                </p>
+                <span className="text-sm text-gray-400">
+                  {new Date(session.startTime).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}
+                </span>
+              </div>
+
+              {session.tag && (
+                <p className="text-xs text-green-400 mt-2 truncate w-full">
+                  #{session.tag}
+                </p>
+              )}
+
+
             </div>
           ))
         )}
       </div>
+
+      <Dialog open={tagModalOpen} onOpenChange={setTagModalOpen}>
+        <DialogContent className="bg-gray-950 text-white shadow-lg border border-gray-700 rounded-lg sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-green-500 text-xl">Tag Session</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="tag" className="block text-sm font-medium text-gray-100 mb-2">
+              Write a few words about what you did
+            </Label>
+            <input
+              id="tag"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              className="w-full bg-gray-800 text-white border border-gray-600 rounded-md p-2"
+              placeholder="e.g. Next.js bug fixing"
+              autoFocus
+              maxLength={40}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveTag();
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button className="bg-gray-700 text-white border border-gray-600 hover:bg-gray-600" onClick={() => setTagModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              className="bg-green-600 text-white border border-green-500 hover:bg-green-500"
+              onClick={handleSaveTag}
+              disabled={isSavingTag}
+            >
+              {isSavingTag ? <LoaderCircle className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Save Tag
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
