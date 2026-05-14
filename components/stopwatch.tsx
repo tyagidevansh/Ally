@@ -1,8 +1,11 @@
+'use client';
+
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useBackgroundTimer } from "@/hooks/use-background-timer";
 import { Button } from "./ui/button";
 import axios from "axios";
 import { useRouter} from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import useTimerStore from "@/store/timerStore";
 import {
   AlertDialog,
@@ -40,8 +43,9 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
   const intervalRef = useRef<number | null>(null);
   const router = useRouter();
   const { isRunning, setIsRunning, runningCount, setRunningCount } = useTimerStore();
-  const { broadcastTimerUpdate } = useTimerCommunication();
+  const { broadcastTimerUpdate, broadcastTimerSaved } = useTimerCommunication();
   const [isRunningLocal, setIsRunningLocal] = useState(false);
+  const queryClient = useQueryClient();
 
 
   const formatTime = (time: number) => {
@@ -138,10 +142,19 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
       console.error("Error saving timer log:", error);
     }
 
+    broadcastTimerSaved();
+
     setIsRunningLocal(false);
     setElapsedTime(0);
     startTimeRef.current = null;
     document.title = "Ally";
+    
+    queryClient.invalidateQueries({ queryKey: ['recent-sessions'] });
+    queryClient.invalidateQueries({ queryKey: ['graph'] });
+    queryClient.invalidateQueries({ queryKey: ['focused-trends'] });
+    queryClient.invalidateQueries({ queryKey: ['comparison'] });
+    queryClient.invalidateQueries({ queryKey: ['streak'] });
+    
     router.refresh();
     fetchTodayStudyTime();
   }

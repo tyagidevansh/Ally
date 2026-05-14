@@ -6,6 +6,7 @@ import { ThemeProvider } from "next-themes";
 import { cn } from "@/lib/utils";
 import Head from "next/head";
 import { Analytics } from '@vercel/analytics/react';
+import { QueryProvider } from "@/components/providers/query-provider";
 
 const font = Merriweather({ weight: "300", subsets: ["latin"] });
 
@@ -38,8 +39,10 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {children}
-            <Analytics />
+            <QueryProvider>
+              {children}
+              <Analytics />
+            </QueryProvider>
           </ThemeProvider>
         </body>
       </html>

@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Button } from './ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -22,6 +24,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import useTimerStore from '@/store/timerStore';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTimerCommunication } from '@/lib/timer-communication';
 import { useBackgroundTimer } from '@/hooks/use-background-timer';
 
@@ -55,7 +58,8 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
   const lastStatusRef = useRef<'work' | 'break' | null>(null);
   const pauseTimeRef = useRef<number | null>(null);
   const { isRunning, setIsRunning, runningCount, setRunningCount } = useTimerStore();
-  const { broadcastTimerUpdate } = useTimerCommunication();
+  const { broadcastTimerUpdate, broadcastTimerSaved } = useTimerCommunication();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     timerRef.current = new Timer(25, 1, 20);
@@ -163,6 +167,12 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
     if (elemStatus) {
       elemStatus.textContent = 'Focus';
     }
+
+    queryClient.invalidateQueries({ queryKey: ['recent-sessions'] });
+    queryClient.invalidateQueries({ queryKey: ['graph'] });
+    queryClient.invalidateQueries({ queryKey: ['focused-trends'] });
+    queryClient.invalidateQueries({ queryKey: ['comparison'] });
+    queryClient.invalidateQueries({ queryKey: ['streak'] });
   };
 
   const logWorkTime = async () => {
@@ -181,6 +191,7 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
     } catch (error) {
       console.error("Error saving timer log: ", error);
     }
+    broadcastTimerSaved();
     startTimeRef.current = null;
   };
 

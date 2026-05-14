@@ -1,7 +1,8 @@
 'use client';
 
 import Navbar from "@/components/navbar";
-import { ReactNode, } from "react";
+import { ReactNode, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Graph from "@/components/graph";
 import RecentSessions from "@/components/recent-sessions";
 import FocusTrend from "@/components/focused-time-comparison";
@@ -17,6 +18,21 @@ const DashboardBox = ({ children, className = "", style }: { children: ReactNode
 );
 
 const Dashboard = () => {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const handleTimerSaved = () => {
+      queryClient.invalidateQueries({ queryKey: ['recent-sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['graph'] });
+      queryClient.invalidateQueries({ queryKey: ['focused-trends'] });
+      queryClient.invalidateQueries({ queryKey: ['comparison'] });
+      queryClient.invalidateQueries({ queryKey: ['streak'] });
+    };
+
+    window.addEventListener('timer-saved', handleTimerSaved);
+    return () => window.removeEventListener('timer-saved', handleTimerSaved);
+  }, [queryClient]);
+
   return (
     <div className="w-full min-h-fit bg-gradient-to-b from-black to-gray-900 text-white">
       <Navbar showToggle={false} />

@@ -11,15 +11,19 @@ class TimerCommunication {
   }
 
   private handleMessage = (event: MessageEvent) => {
-  const { type, data } = event.data;
-  if (type === 'timer-update') {
-    const { isRunning, displayTime, startTime, runningCount } = data;
-    useTimerStore.getState().setIsRunning(isRunning);
-    useTimerStore.getState().setDisplayTime(displayTime);
-    useTimerStore.getState().setStartTime(startTime);
-    useTimerStore.getState().setRunningCount(runningCount);  
-  }
-};
+    const { type, data } = event.data;
+    if (type === 'timer-update') {
+      const { isRunning, displayTime, startTime, runningCount } = data;
+      useTimerStore.getState().setIsRunning(isRunning);
+      useTimerStore.getState().setDisplayTime(displayTime);
+      useTimerStore.getState().setStartTime(startTime);
+      useTimerStore.getState().setRunningCount(runningCount);  
+    } else if (type === 'timer-saved') {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('timer-saved'));
+      }
+    }
+  };
 
 
   broadcastTimerUpdate() {
@@ -28,6 +32,10 @@ class TimerCommunication {
       type: 'timer-update',
       data: { isRunning, displayTime, startTime, runningCount },
     });
+  }
+
+  broadcastTimerSaved() {
+    this.channel.postMessage({ type: 'timer-saved' });
   }
 }
 
@@ -45,5 +53,6 @@ export function useTimerCommunication() {
     startTime,
     runningCount,
     broadcastTimerUpdate: timerCommunication.broadcastTimerUpdate.bind(timerCommunication),
+    broadcastTimerSaved: timerCommunication.broadcastTimerSaved.bind(timerCommunication),
   };
 }

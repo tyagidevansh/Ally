@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 interface FocusTimeData {
   currentMonth: {
@@ -18,23 +18,14 @@ interface FocusTimeData {
 }
 
 const FocusTrend = () => {
-  const [focusData, setFocusData] = useState<FocusTimeData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch('/api/focused-time-comparison');
-        const data = await res.json();
-        setFocusData(data);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching focus trend data:', error);
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  const { data: focusData, isLoading: loading } = useQuery<FocusTimeData>({
+    queryKey: ['comparison'],
+    queryFn: async () => {
+      const res = await fetch('/api/focused-time-comparison');
+      if (!res.ok) throw new Error('Failed to fetch focus trend data');
+      return res.json();
+    },
+  });
 
   if (loading) {
     return <div>Loading...</div>;

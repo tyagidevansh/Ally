@@ -1,7 +1,8 @@
 'use client';
 
 import { PlusCircle, Clock } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Button } from './ui/button';
@@ -32,8 +33,7 @@ const formatTime = (time: number) => {
 };
 
 const RecentSessions = () => {
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date | undefined>(undefined);
   const minuteRef = useRef<HTMLInputElement>(null);
@@ -43,24 +43,15 @@ const RecentSessions = () => {
   const [error, setError] = useState<String>("");
   const [activity, setActivity] = useState("Study");
 
-  useEffect(() => {
-    const fetchRecentSessions = async () => {
-      try {
-        const res = await fetch('/api/recent-times');
-        const data = await res.json();
-
-        if (data.success) {
-          setSessions(data.logs);
-        }
-      } catch (error) {
-        console.error('Error fetching recent sessions:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRecentSessions();
-  }, []);
+  const { data: sessions = [], isLoading: loading } = useQuery<Session[]>({
+    queryKey: ['recent-sessions'],
+    queryFn: async () => {
+      const res = await fetch('/api/recent-times');
+      const data = await res.json();
+      if (data.success) return data.logs;
+      return [];
+    },
+  });
 
   const handleChange = (event: any) => {
     const value = event.target.value;
@@ -97,6 +88,11 @@ const RecentSessions = () => {
         duration: Number(newDuration) * 60000,
         activity,
       });
+      queryClient.invalidateQueries({ queryKey: ['recent-sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['graph'] });
+      queryClient.invalidateQueries({ queryKey: ['focused-trends'] });
+      queryClient.invalidateQueries({ queryKey: ['comparison'] });
+      queryClient.invalidateQueries({ queryKey: ['streak'] });
       setOpen(false);
     } catch (error) {
       //console.error("Error saving timer log:", error);

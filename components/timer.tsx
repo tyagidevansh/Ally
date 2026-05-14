@@ -1,8 +1,11 @@
+'use client';
+
 import React, { useEffect, useState, useRef, useCallback} from "react";
 import { useBackgroundTimer } from "@/hooks/use-background-timer";
 import { Button } from "./ui/button";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import useTimerStore from "@/store/timerStore";
 import {
   Select,
@@ -42,8 +45,9 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   const selectedTimeRef = useRef<number>(10800);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const { isRunning, setIsRunning, runningCount, setRunningCount } = useTimerStore();
-  const { broadcastTimerUpdate } = useTimerCommunication();
+  const { broadcastTimerUpdate, broadcastTimerSaved } = useTimerCommunication();
   const [isRunningLocal, setIsRunningLocal] = useState(false);
+  const queryClient = useQueryClient();
 
   const router = useRouter();
   const { sendNotification } = useNotifications();
@@ -164,11 +168,20 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
       console.error("Error saving timer log: ", error);
     }
     
+    broadcastTimerSaved();
+
     setIsRunningLocal(false);
     startTimeRef.current = null;
     setTimeLeft(selectedTimeRef.current);
     setTotalTime(10800);
     document.title = "Ally";
+    
+    queryClient.invalidateQueries({ queryKey: ['recent-sessions'] });
+    queryClient.invalidateQueries({ queryKey: ['graph'] });
+    queryClient.invalidateQueries({ queryKey: ['focused-trends'] });
+    queryClient.invalidateQueries({ queryKey: ['comparison'] });
+    queryClient.invalidateQueries({ queryKey: ['streak'] });
+
     router.refresh();
   }, [setIsRunningLocal, activity, router]);
   

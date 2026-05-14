@@ -18,6 +18,7 @@ import {
 import axios from "axios";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { LoaderCircle } from "lucide-react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
 import { addDays, format, setDate } from "date-fns";
 import { Calendar as CalendarIcon, Minus, Plus } from "lucide-react";
@@ -155,7 +156,6 @@ const generateTicks = (maxValue: number) => {
 
 const Graph = () => {
   const [chartData, setChartData] = useState<any[]>([]);
-  const [chartLoading, setChartLoading] = useState<boolean>(true);
   const [dropdownSelection, setDropdownSelection] = useState<string>("30");
   const [byMonth, setByMonth] = useState<boolean>(false);
   const [dailyGoal, setDailyGoal] = useState<number>(180);
@@ -176,11 +176,6 @@ const Graph = () => {
       )
     ),
   });
-
-  // Refs for request cancellation and debouncing
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const requestTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const hasInitializedRef = useRef(false);
 
   // Memoized calculations
   const { maxTime, totalTime, ticks } = useMemo(() => {
@@ -354,84 +349,40 @@ const Graph = () => {
     setDate({ from: start, to: end });
   }, [dropdownSelection]);
 
-  // Debounced data fetching
-  const handleRequest = useCallback(async () => {
-    if (!date?.from || !date?.to) return;
+  // Debounced data fetching logic handled by React Query naturally, we'll just add a slight delay via state if needed,
+  // but react-query aborts previous requests if the key changes, which effectively debounces the fetch over the network.
+  const { data: fetchedData, isPending: chartLoading } = useQuery({
+    queryKey: ['graph', date?.from?.toISOString(), date?.to?.toISOString(), byMonth, dropdownSelection === "alltime"],
+    queryFn: async ({ signal }) => {
+      if (!date?.from || !date?.to) return null;
+      const response = await axios.get("/api/graphs", {
+        params: {
+          startTime: date.from.toISOString(),
+          endTime: date.to.toISOString(),
+          byMonth: byMonth,
+          allTime: dropdownSelection === "alltime",
+        },
+        signal,
+      });
+      return response.data;
+    },
+    enabled: !!date?.from && !!date?.to,
+    placeholderData: keepPreviousData,
+  });
 
-    // Cancel previous request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    // Clear previous timeout
-    if (requestTimeoutRef.current) {
-      clearTimeout(requestTimeoutRef.current);
-    }
-
-    // Debounce the request
-    requestTimeoutRef.current = setTimeout(async () => {
-      setChartLoading(true);
-
-      // Create new abort controller
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
-
-      try {
-        const response = await axios.get("/api/graphs", {
-          params: {
-            startTime: date.from!.toISOString(),
-            endTime: date.to!.toISOString(),
-            byMonth: byMonth,
-            allTime: dropdownSelection === "alltime",
-          },
-          signal: abortController.signal,
-        });
-
-        // Only update if this request wasn't cancelled
-        if (!abortController.signal.aborted) {
-          setChartData(response.data.chartData);
-          if (response.data.chartData[0]?.dailyGoal) {
-            setDailyGoal(response.data.chartData[0].dailyGoal);
-          }
-        }
-      } catch (error) {
-        if (!axios.isCancel(error)) {
-          console.error("Error fetching chart data:", error);
-        }
-      } finally {
-        if (!abortController.signal.aborted) {
-          setChartLoading(false);
-        }
+  useEffect(() => {
+    if (fetchedData) {
+      setChartData(fetchedData.chartData);
+      if (fetchedData.chartData[0]?.dailyGoal) {
+        setDailyGoal(fetchedData.chartData[0].dailyGoal);
       }
-    }, 300); // 300ms debounce
-  }, [date?.from, date?.to, byMonth]);
+    }
+  }, [fetchedData]);
 
   // Effect for dropdown selection changes
   useEffect(() => {
     calculateDateRange();
   }, [dropdownSelection, calculateDateRange]);
-
-  // Effect for date changes
-  useEffect(() => {
-    if (date?.from && date?.to && hasInitializedRef.current) {
-      handleRequest();
-    }
-    if (date?.from && date?.to) {
-      hasInitializedRef.current = true;
-    }
-  }, [date?.from?.getTime(), date?.to?.getTime(), byMonth]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      if (requestTimeoutRef.current) {
-        clearTimeout(requestTimeoutRef.current);
-      }
-    };
-  }, []);
 
   // Streak handling - moved to separate effect, runs less frequently
   useEffect(() => {

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { LineChart, Line, XAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useQuery } from '@tanstack/react-query';
 
 const BestHours = () => {
   interface ChartData {
@@ -7,26 +7,20 @@ const BestHours = () => {
     productivity: number;
   }
   
-  const [data, setData] = useState<ChartData[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
+  const { data = [], isLoading: loading } = useQuery<ChartData[]>({
+    queryKey: ['focused-trends'],
+    queryFn: async () => {
       const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const response = await fetch('/api/productive-hours?timezone=' + userTimeZone);
+      if (!response.ok) throw new Error('Failed to fetch best hours data');
       const responseJSON = await response.json();
 
-      const chartData = Object.keys(responseJSON).map((hour, index) => ({
+      return Object.keys(responseJSON).map((hour, index) => ({
         hour: `${hour}:00`,
         productivity: Math.round(responseJSON[hour] * 100)
       }));
-      setData(chartData);
-      setLoading(false);
-    };
-
-    fetchData();
-  }, []); 
+    },
+  });
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {

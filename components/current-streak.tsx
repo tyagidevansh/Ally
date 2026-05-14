@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Flame } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 interface StreakData {
   streakStartDate: number;
@@ -20,26 +21,22 @@ interface PostStreakData {
 }
 
 const CurrentStreak = () => {
-  const [streakData, setStreakData] = useState<StreakData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
   const [currentStreak, setCurrentStreak] = useState<number>(0);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch('/api/current-streak');
-        const data: StreakData = await res.json();
-        setStreakData(data);
-        setLoading(false);
-        calculateStreak(data);
-      } catch (error) {
-        console.error('Error fetching streak data:', error);
-        setLoading(false);
-      }
-    };
+  const { data: streakData, isLoading: loading } = useQuery<StreakData>({
+    queryKey: ['streak'],
+    queryFn: async () => {
+      const res = await fetch('/api/current-streak');
+      if (!res.ok) throw new Error('Failed to fetch streak data');
+      return res.json();
+    },
+  });
 
-    fetchData();
-  }, []);
+  useEffect(() => {
+    if (streakData) {
+      calculateStreak(streakData);
+    }
+  }, [streakData]);
 
   const calculateStreak = (data: StreakData) => {
     const { streakStartDate, streakLastDate, todayTime, dailyGoal, bestStreak, allHabitsDone } = data;

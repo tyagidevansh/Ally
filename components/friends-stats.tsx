@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { UserPlus, Check, X, Clock, Target, Flame } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface FriendStat {
   id: string;
@@ -20,35 +21,31 @@ interface FriendRequest {
 }
 
 const FriendsStats = () => {
-  const [friends, setFriends] = useState<FriendStat[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<FriendRequest[]>([]);
+  const queryClient = useQueryClient();
   const [searchEmail, setSearchEmail] = useState('');
-  const [loading, setLoading] = useState(true);
   const [addMessage, setAddMessage] = useState({ text: '', type: '' });
 
-  useEffect(() => {
-    fetchFriendsAndRequests();
-  }, []);
+  const { data: friends = [], isLoading: isLoadingFriends } = useQuery<FriendStat[]>({
+    queryKey: ['friends'],
+    queryFn: async () => {
+      const res = await fetch('/api/friends/stats', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to fetch friends');
+      return res.json();
+    },
+    refetchInterval: 15 * 60 * 1000,
+  });
 
-  const fetchFriendsAndRequests = async () => {
-    setLoading(true);
-    try {
-      const [friendsRes, requestsRes] = await Promise.all([
-        fetch('/api/friends/stats', { cache: 'no-store' }),
-        fetch('/api/friends/requests', { cache: 'no-store' })
-      ]);
-      
-      if (friendsRes.ok) {
-        setFriends(await friendsRes.json());
-      }
-      if (requestsRes.ok) {
-        setPendingRequests(await requestsRes.json());
-      }
-    } catch (error) {
-      console.error('Failed to fetch friends data:', error);
-    }
-    setLoading(false);
-  };
+  const { data: pendingRequests = [], isLoading: isLoadingRequests } = useQuery<FriendRequest[]>({
+    queryKey: ['friendRequests'],
+    queryFn: async () => {
+      const res = await fetch('/api/friends/requests', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to fetch requests');
+      return res.json();
+    },
+    refetchInterval: 15 * 60 * 1000,
+  });
+
+  const loading = isLoadingFriends || isLoadingRequests;
 
   const handleSendRequest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,9 +82,9 @@ const FriendsStats = () => {
       });
       
       if (res.ok) {
-        setPendingRequests(prev => prev.filter(req => req.id !== requestId));
+        queryClient.invalidateQueries({ queryKey: ['friendRequests'] });
         if (accept) {
-          fetchFriendsAndRequests(); // refresh list
+          queryClient.invalidateQueries({ queryKey: ['friends'] });
         }
       }
     } catch (error) {
