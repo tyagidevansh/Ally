@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { UserPlus, Check, X, Clock, Target, Flame } from 'lucide-react';
+import { UserPlus, Check, X, Clock, Target, Flame, Send } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface FriendStat {
@@ -24,6 +24,11 @@ const FriendsStats = () => {
   const queryClient = useQueryClient();
   const [searchEmail, setSearchEmail] = useState('');
   const [addMessage, setAddMessage] = useState({ text: '', type: '' });
+  
+  // Track which friend is being reacted to
+  const [activeReaction, setActiveReaction] = useState<{ id: string, type: 'CHEER' | 'SNEER' } | null>(null);
+  const [reactionMessage, setReactionMessage] = useState('');
+  const [isSendingReaction, setIsSendingReaction] = useState(false);
 
   const { data: friends = [], isLoading: isLoadingFriends } = useQuery<FriendStat[]>({
     queryKey: ['friends'],
@@ -89,6 +94,33 @@ const FriendsStats = () => {
       }
     } catch (error) {
       console.error('Failed to respond to friend request:', error);
+    }
+  };
+
+  const handleSendReaction = async (friendId: string) => {
+    if (!activeReaction || !reactionMessage.trim()) return;
+    
+    setIsSendingReaction(true);
+    try {
+      const res = await fetch('/api/friends/cheer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          friendId,
+          type: activeReaction.type,
+          message: reactionMessage.trim().substring(0, 100)
+        }),
+      });
+
+      if (res.ok) {
+        // Success feedback could go here, for now just close
+        setActiveReaction(null);
+        setReactionMessage('');
+      }
+    } catch (error) {
+      console.error('Failed to send reaction:', error);
+    } finally {
+      setIsSendingReaction(false);
     }
   };
 
@@ -169,12 +201,65 @@ const FriendsStats = () => {
               <div key={friend.id} className="bg-gray-800 p-3 rounded-lg border border-gray-700">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-semibold text-gray-100">{friend.name}</h4>
-                  {friend.isFocusing && (
-                    <span className="bg-green-500/20 text-green-500 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                      Currently Focused
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {friend.isFocusing && (
+                      <>
+                        <button 
+                          onClick={() => setActiveReaction({ id: friend.id, type: 'CHEER' })}
+                          className="p-1.5 rounded bg-green-500/10 hover:bg-green-500/30 text-green-500 transition-colors"
+                          title="Send a cheer!"
+                        >
+                          🎉
+                        </button>
+                        <button 
+                          onClick={() => setActiveReaction({ id: friend.id, type: 'SNEER' })}
+                          className="p-1.5 rounded bg-orange-500/10 hover:bg-orange-500/30 text-orange-500 transition-colors"
+                          title="Send a sneer!"
+                        >
+                          😈
+                        </button>
+                        <span className="bg-green-500/20 text-green-500 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider hidden sm:inline-block">
+                          Focusing
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
+                
+                {/* Reaction Form */}
+                {activeReaction?.id === friend.id && (
+                  <div className="mb-3 p-2 bg-gray-900 rounded-lg border border-gray-700/80 animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold" style={{ color: activeReaction.type === 'CHEER' ? '#4ade80' : '#fb923c' }}>
+                        {activeReaction.type === 'CHEER' ? 'Cheering' : 'Sneering'} at {friend.name}
+                      </span>
+                      <button onClick={() => setActiveReaction(null)} className="text-gray-500 hover:text-gray-300 p-0.5">
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={reactionMessage}
+                        onChange={(e) => setReactionMessage(e.target.value)}
+                        placeholder="Write a short message..."
+                        maxLength={100}
+                        className="flex-1 bg-gray-800 text-sm px-2 py-1.5 rounded border border-gray-700 focus:outline-none focus:border-green-500"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSendReaction(friend.id);
+                        }}
+                      />
+                      <button 
+                        onClick={() => handleSendReaction(friend.id)}
+                        disabled={!reactionMessage.trim() || isSendingReaction}
+                        className="p-1.5 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <Send size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div className="flex flex-col items-center justify-center p-2 bg-gray-900 rounded border border-gray-700/50">
                     <Clock size={14} className="text-blue-400 mb-1" />

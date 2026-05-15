@@ -25,6 +25,8 @@ model Profile {
   ToDo        ToDo[]
   sentFriendRequests     Friendship[] @relation("SentFriendships")
   receivedFriendRequests Friendship[] @relation("ReceivedFriendships")
+  sentCheerSneers        CheerSneer[] @relation("SentCheerSneers")
+  receivedCheerSneers    CheerSneer[] @relation("ReceivedCheerSneers")
   isFocusing  Boolean    @default(false)
   lastTodoReset DateTime @default(now())
 }
@@ -74,4 +76,16 @@ model Friendship {
   user2     Profile  @relation("ReceivedFriendships", fields: [user2Id], references: [id], onDelete: Cascade)
 
   @@unique([user1Id, user2Id])
+}
+
+model CheerSneer {
+  id         String   @id @default(uuid())
+  fromId     String
+  toId       String
+  type       String   // "CHEER" or "SNEER"
+  message    String
+  seen       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  from       Profile  @relation("SentCheerSneers", fields: [fromId], references: [id], onDelete: Cascade)
+  to         Profile  @relation("ReceivedCheerSneers", fields: [toId], references: [id], onDelete: Cascade)
 }
