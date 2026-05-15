@@ -227,7 +227,7 @@ const CheerSneerPopup = ({ cheers, onDismiss }: CheerSneerPopupProps) => {
                     : 'linear-gradient(135deg, #ef4444, #dc2626)',
                   color: 'white',
                 }}
-                whileHover={{ scale: 1.02, brightness: 1.1 }}
+                whileHover={{ scale: 1.02, filter: "brightness(1.1)" }}
                 whileTap={{ scale: 0.98 }}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
