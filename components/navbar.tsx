@@ -12,9 +12,10 @@ import axios from 'axios';
 
 interface NavbarProps {
   showToggle: boolean;
+  linksInNewTab?: boolean;
 }
 
-const Navbar = ({ showToggle }: NavbarProps) => {
+const Navbar = ({ showToggle, linksInNewTab }: NavbarProps) => {
   const [isClient, setIsClient] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -80,8 +81,8 @@ const Navbar = ({ showToggle }: NavbarProps) => {
           <Link
             href="/"
             className="hover:opacity-80 transition-opacity"
-            target={runningCount > 0 ? '_blank' : '_self'}
-            rel={runningCount > 0 ? 'noopener noreferrer' : undefined}
+            target={runningCount > 0 || linksInNewTab ? '_blank' : '_self'}
+            rel={runningCount > 0 || linksInNewTab ? 'noopener noreferrer' : undefined}
           >
             <div className="relative w-16 h-10 md:mr-6">
               <Image
@@ -94,15 +95,15 @@ const Navbar = ({ showToggle }: NavbarProps) => {
           </Link>
 
           <div className="hidden md:flex items-center space-x-6">
-            <Link href="/dashboard" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors">
+            <Link href="/dashboard" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors" target={linksInNewTab ? '_blank' : undefined} rel={linksInNewTab ? 'noopener noreferrer' : undefined}>
               <BarChart2 size={18} />
               <span>Dashboard</span>
             </Link>
-            <Link href="/focus" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors">
+            <Link href="/focus" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors" target={linksInNewTab ? '_blank' : undefined} rel={linksInNewTab ? 'noopener noreferrer' : undefined}>
               <BookOpen size={18} />
               <span>Focus</span>
             </Link>
-            <Link href="/journal" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors">
+            <Link href="/journal" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors" target={linksInNewTab ? '_blank' : undefined} rel={linksInNewTab ? 'noopener noreferrer' : undefined}>
               <PenTool size={18} />
               <span>Journal</span>
             </Link>
@@ -140,15 +141,15 @@ const Navbar = ({ showToggle }: NavbarProps) => {
             showToggle ? 'text-black' : 'text-white'
           } dark:text-white`}
         >          
-          <Link href="/dashboard" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors">
+          <Link href="/dashboard" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors" target={linksInNewTab ? '_blank' : undefined} rel={linksInNewTab ? 'noopener noreferrer' : undefined}>
             <BarChart2 size={18} />
             <span>Dashboard</span>
           </Link>
-          <Link href="/focus" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors">
+          <Link href="/focus" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors" target={linksInNewTab ? '_blank' : undefined} rel={linksInNewTab ? 'noopener noreferrer' : undefined}>
             <BookOpen size={18} />
             <span>Focus</span>
           </Link>
-          <Link href="/journal" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors">
+          <Link href="/journal" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors" target={linksInNewTab ? '_blank' : undefined} rel={linksInNewTab ? 'noopener noreferrer' : undefined}>
             <PenTool size={18} />
             <span>Journal</span>
           </Link>

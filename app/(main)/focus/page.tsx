@@ -34,7 +34,7 @@ const environments: Environment[] = [
 ];
 
 const Home = () => {
-  const [selectedComponent, setSelectedComponent] = useState("Timer");
+  const [selectedComponent, setSelectedComponent] = useState("Stopwatch");
   const [quote, setQuote] = useState("");
   const [currentEnv, setCurrentEnv] = useState<Environment>(environments[0]);
   const sliderRef = useRef<any>(null);
@@ -106,7 +106,7 @@ const Home = () => {
 
       {/* Main content layer */}
       <div className="relative z-20 flex flex-col h-full">
-        <Navbar showToggle={false}/>
+        <Navbar showToggle={false} linksInNewTab={true} />
         
         <div className="flex-1 min-h-0 flex flex-col md:grid md:grid-cols-10 px-4 pt-14 pb-2 md:py-4">
           
