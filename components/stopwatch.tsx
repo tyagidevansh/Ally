@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useBackgroundTimer } from "@/hooks/use-background-timer";
 import { Button } from "./ui/button";
 import axios from "axios";
-import { useRouter} from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import useTimerStore from "@/store/timerStore";
 import {
@@ -25,7 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useTimerCommunication } from "@/lib/timer-communication";
+import { getSession, saveSession, clearSession, getElapsedMs, FocusSession } from "@/lib/focus-session";
+import { timerComm } from "@/lib/timer-communication";
 
 interface StopwatchProps {
   autoStart?: boolean;
@@ -33,20 +34,17 @@ interface StopwatchProps {
   initialActivity?: string;
 }
 
-const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"  }: StopwatchProps) => {
+const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study" }: StopwatchProps) => {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showAlert, setShowAlert] = useState(false);
   const [activity, setActivity] = useState(initialActivity);
-
   const [studyTimeToday, setStudyTimeToday] = useState(0);
-  const startTimeRef = useRef<number | null>(null);
+  const [isRunningLocal, setIsRunningLocal] = useState(false);
+
   const intervalRef = useRef<number | null>(null);
   const router = useRouter();
-  const { isRunning, setIsRunning, runningCount, setRunningCount } = useTimerStore();
-  const { broadcastTimerUpdate, broadcastTimerSaved } = useTimerCommunication();
-  const [isRunningLocal, setIsRunningLocal] = useState(false);
+  const { setIsRunning } = useTimerStore();
   const queryClient = useQueryClient();
-
 
   const formatTime = (time: number) => {
     const hours = Math.floor(time / 3600000);
@@ -78,143 +76,165 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
     } else {
       return `${seconds} sec`;
     }
-  }
+  };
 
-  const updateTimer = useCallback(() => {
-    if (startTimeRef.current !== null) {
-      const elapsedTime = Date.now() - startTimeRef.current;
-      setElapsedTime(elapsedTime);
-    }
-  }, []);
-
-  // Recalculate elapsed time and update title when tab becomes visible (mobile background recovery)
-  const handleBackgroundTick = useCallback(() => {
-    if (startTimeRef.current !== null) {
-      const elapsedTime = Date.now() - startTimeRef.current;
-      setElapsedTime(elapsedTime);
-      document.title = `${formatTime(elapsedTime)} | Ally`;
-    }
-  }, []);
-
-  // This hook handles mobile background recovery via visibilitychange + fallback interval
-  useBackgroundTimer(isRunningLocal, handleBackgroundTick, 1000);
-
-  const startTimer = useCallback(() => {
-    const startTime = Date.now();
-    startTimeRef.current = startTime;
-    setIsRunningLocal(true);
-    const currentRunningCount = useTimerStore.getState().runningCount;
-    setRunningCount(currentRunningCount + 1);
-    setIsRunning(true);
-    broadcastTimerUpdate();
-    intervalRef.current = window.setInterval(() => {
-      updateTimer();
-      document.title = `${formatTime(Date.now() - startTime)} | Ally`;
-    }, 1000);
-  }, [setIsRunning, setRunningCount, broadcastTimerUpdate]);
-
-  const stopTimer = useCallback(async () => {
-  if (startTimeRef.current !== null) {
-    const button = document.getElementById("stopButton");
-    if (button) {
-      button.innerText = "Saving...";
-    }
-    const endTime = Date.now();
-    const duration = endTime - startTimeRef.current;
-
-    const currentRunningCount = useTimerStore.getState().runningCount;
-    setRunningCount(Math.max(0, currentRunningCount - 1)); 
-
-    broadcastTimerUpdate();
-
+  // ── Ticking ──────────────────────────────────────────────────────────
+  const clearTicking = useCallback(() => {
     if (intervalRef.current !== null) {
       clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  const startTicking = useCallback(() => {
+    clearTicking();
+    const tick = () => {
+      const s = getSession();
+      if (s && s.type === 'Stopwatch') {
+        const elapsed = getElapsedMs(s);
+        setElapsedTime(elapsed);
+        document.title = `${formatTime(elapsed)} | Ally`;
+      }
+    };
+    tick();
+    intervalRef.current = window.setInterval(tick, 1000);
+  }, [clearTicking]);
+
+  // Background recovery: recalculate when tab becomes visible
+  const handleBackgroundTick = useCallback(() => {
+    const s = getSession();
+    if (s && s.type === 'Stopwatch') {
+      const elapsed = getElapsedMs(s);
+      setElapsedTime(elapsed);
+      document.title = `${formatTime(elapsed)} | Ally`;
+    }
+  }, []);
+
+  useBackgroundTimer(isRunningLocal, handleBackgroundTick, 1000);
+
+  // ── Restore session on mount + cross-tab sync ────────────────────────
+  useEffect(() => {
+    const session = getSession();
+    if (session && session.type === 'Stopwatch') {
+      setIsRunningLocal(true);
+      setActivity(session.activity);
+      setIsRunning(true);
+      startTicking();
     }
 
+    const unsub = timerComm.subscribe((msg) => {
+      if (msg.type === 'session-stopped' || msg.type === 'session-saved') {
+        setIsRunningLocal(false);
+        setElapsedTime(0);
+        clearTicking();
+        document.title = 'Ally';
+        fetchTodayStudyTime();
+      } else if (msg.type === 'session-started') {
+        const s = getSession();
+        if (s && s.type === 'Stopwatch') {
+          setIsRunningLocal(true);
+          setActivity(s.activity);
+          setIsRunning(true);
+          startTicking();
+        }
+      }
+    });
+
+    return () => {
+      unsub();
+      clearTicking();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Start / Stop ─────────────────────────────────────────────────────
+  const startTimer = useCallback(() => {
+    const session: FocusSession = {
+      type: 'Stopwatch',
+      startedAt: Date.now(),
+      activity,
+      isPaused: false,
+      totalPausedMs: 0,
+    };
+    saveSession(session);
+    setIsRunningLocal(true);
+    setIsRunning(true);
+    timerComm.broadcast({ type: 'session-started' });
+    startTicking();
+  }, [activity, setIsRunning, startTicking]);
+
+  const stopTimer = useCallback(async () => {
+    const session = getSession();
+    if (!session) return;
+
+    const button = document.getElementById("stopButton");
+    if (button) button.innerText = "Saving...";
+
+    const endTime = Date.now();
+    const duration = getElapsedMs(session);
+
+    clearSession();
+    setIsRunningLocal(false);
+    setIsRunning(false);
+    clearTicking();
+    document.title = 'Ally';
+
     try {
-      const response = await axios.post("/api/timer-log", {
-        startTime: new Date(startTimeRef.current).toISOString(),
+      await axios.post("/api/timer-log", {
+        startTime: new Date(session.startedAt).toISOString(),
         endTime: new Date(endTime).toISOString(),
         duration,
-        activity,
+        activity: session.activity,
       });
     } catch (error) {
       console.error("Error saving timer log:", error);
     }
 
-    broadcastTimerSaved();
+    timerComm.broadcast({ type: 'session-saved' });
 
-    setIsRunningLocal(false);
     setElapsedTime(0);
-    startTimeRef.current = null;
-    document.title = "Ally";
-    
     queryClient.invalidateQueries({ queryKey: ['recent-sessions'] });
     queryClient.invalidateQueries({ queryKey: ['graph'] });
     queryClient.invalidateQueries({ queryKey: ['focused-trends'] });
     queryClient.invalidateQueries({ queryKey: ['comparison'] });
     queryClient.invalidateQueries({ queryKey: ['streak'] });
-    
+
     router.refresh();
     fetchTodayStudyTime();
-  }
-}, [router, activity, setRunningCount, broadcastTimerUpdate]);
-
-  useEffect(() => {
-    const isNowRunning = runningCount > 0;
-    setIsRunning(isNowRunning);
-  }, [runningCount, setIsRunning]);
+  }, [router, setIsRunning, clearTicking, queryClient]);
 
   const resetAbandonedTimer = useCallback(() => {
-    if (intervalRef.current !== null) {
-      clearInterval(intervalRef.current);
-    }
-    const currentRunningCount = useTimerStore.getState().runningCount;
-    setRunningCount(Math.max(0, currentRunningCount - 1));
-    broadcastTimerUpdate();
+    clearSession();
     setIsRunningLocal(false);
+    setIsRunning(false);
+    clearTicking();
     setElapsedTime(0);
-    startTimeRef.current = null;
     document.title = "Ally";
-  }, [setRunningCount, broadcastTimerUpdate]);
+    timerComm.broadcast({ type: 'session-stopped' });
+  }, [setIsRunning, clearTicking]);
 
+  // Auto-discard sessions older than 5 hours
   useEffect(() => {
     if (isRunningLocal && elapsedTime >= 5 * 60 * 60 * 1000) {
       resetAbandonedTimer();
     }
   }, [elapsedTime, isRunningLocal, resetAbandonedTimer]);
 
-
+  // ── Warn before unload ──────────────────────────────────────────────
   useEffect(() => {
-  const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-    if (isRunningLocal) {
-      event.preventDefault();
-      event.returnValue = '';  
-    }
-  };
-
-  const handleUnload = () => {
-    if (isRunningLocal) {
-      
-      const currentRunningCount = useTimerStore.getState().runningCount;
-      setRunningCount(Math.max(0, currentRunningCount - 1));
-      if (runningCount === 1) {
-        setIsRunning(false);
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (isRunningLocal) {
+        event.preventDefault();
+        event.returnValue = '';
       }
-      broadcastTimerUpdate();
-    }
-  };
+    };
 
-  window.addEventListener('beforeunload', handleBeforeUnload);
-  window.addEventListener('unload', handleUnload);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isRunningLocal]);
 
-  return () => {
-    window.removeEventListener('beforeunload', handleBeforeUnload);
-    window.removeEventListener('unload', handleUnload);
-  };
-}, [isRunningLocal, runningCount, broadcastTimerUpdate, setIsRunning, setRunningCount]);
-
-
+  // ── Cleanup interval on unmount ─────────────────────────────────────
   useEffect(() => {
     return () => {
       if (intervalRef.current !== null) {
@@ -250,10 +270,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
 
   useEffect(() => {
     fetchTodayStudyTime();
-  }, [isRunning]);
-
-  useEffect(() => {
-  }, [activity]);
+  }, [isRunningLocal]);
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center select-none text-white overflow-y-auto py-4 md:py-0">
@@ -350,4 +367,3 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
 };
 
 export default Stopwatch;
-

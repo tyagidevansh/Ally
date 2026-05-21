@@ -1,58 +1,54 @@
-import useTimerStore from '@/store/timerStore';
+/**
+ * Cross-tab communication for focus sessions.
+ * Uses BroadcastChannel to notify other tabs of session lifecycle events.
+ * On receiving a message, automatically syncs Zustand isRunning from localStorage.
+ */
+
+import { getSession } from '@/lib/focus-session';
+
+export type TimerMessage =
+  | { type: 'session-started' }
+  | { type: 'session-stopped' }
+  | { type: 'session-saved' }
+  | { type: 'session-paused' }
+  | { type: 'session-resumed' };
 
 const TIMER_CHANNEL = 'timer-channel';
 
 class TimerCommunication {
-  private channel: BroadcastChannel;
+  private channel: BroadcastChannel | null = null;
+  private listeners: Set<(msg: TimerMessage) => void> = new Set();
 
   constructor() {
-    this.channel = new BroadcastChannel(TIMER_CHANNEL);
-    this.channel.onmessage = this.handleMessage;
-  }
-
-  private handleMessage = (event: MessageEvent) => {
-    const { type, data } = event.data;
-    if (type === 'timer-update') {
-      const { isRunning, displayTime, startTime, runningCount } = data;
-      useTimerStore.getState().setIsRunning(isRunning);
-      useTimerStore.getState().setDisplayTime(displayTime);
-      useTimerStore.getState().setStartTime(startTime);
-      useTimerStore.getState().setRunningCount(runningCount);  
-    } else if (type === 'timer-saved') {
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('timer-saved'));
-      }
+    if (typeof window !== 'undefined') {
+      this.channel = new BroadcastChannel(TIMER_CHANNEL);
+      this.channel.onmessage = (event: MessageEvent) => {
+        const msg = event.data as TimerMessage;
+        this.listeners.forEach(fn => fn(msg));
+      };
     }
-  };
-
-
-  broadcastTimerUpdate() {
-    const { isRunning, displayTime, startTime, runningCount } = useTimerStore.getState();
-    this.channel.postMessage({
-      type: 'timer-update',
-      data: { isRunning, displayTime, startTime, runningCount },
-    });
   }
 
-  broadcastTimerSaved() {
-    this.channel.postMessage({ type: 'timer-saved' });
+  broadcast(msg: TimerMessage) {
+    this.channel?.postMessage(msg);
+  }
+
+  subscribe(fn: (msg: TimerMessage) => void): () => void {
+    this.listeners.add(fn);
+    return () => { this.listeners.delete(fn); };
   }
 }
 
-export const timerCommunication = new TimerCommunication();
+export const timerComm = new TimerCommunication();
 
-export function useTimerCommunication() {
-  const isRunning = useTimerStore((state) => state.isRunning);
-  const displayTime = useTimerStore((state) => state.displayTime);
-  const startTime = useTimerStore((state) => state.startTime);
-  const runningCount = useTimerStore((state) => state.runningCount);
-
+/**
+ * React hook for components that need to broadcast session events.
+ * Also returns a helper to check if a session is active.
+ */
+export function useTimerBroadcast() {
   return {
-    isRunning,
-    displayTime,
-    startTime,
-    runningCount,
-    broadcastTimerUpdate: timerCommunication.broadcastTimerUpdate.bind(timerCommunication),
-    broadcastTimerSaved: timerCommunication.broadcastTimerSaved.bind(timerCommunication),
+    broadcast: timerComm.broadcast.bind(timerComm),
+    subscribe: timerComm.subscribe.bind(timerComm),
+    hasActiveSession: () => getSession() !== null,
   };
 }

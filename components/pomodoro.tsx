@@ -25,10 +25,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import useTimerStore from '@/store/timerStore';
 import { useQueryClient } from '@tanstack/react-query';
-import { useTimerCommunication } from '@/lib/timer-communication';
 import { useBackgroundTimer } from '@/hooks/use-background-timer';
+import { getSession, saveSession, clearSession, FocusSession } from '@/lib/focus-session';
+import { timerComm } from '@/lib/timer-communication';
 
 const Timer = require('timer-for-pomodoro');
+
+const WORK_MINUTES = 25;
+const BREAK_MINUTES = 5;
+const WORK_MS = WORK_MINUTES * 60 * 1000;
 
 interface TimerState {
   raw: number;
@@ -50,19 +55,44 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
   const [showAlert, setShowAlert] = useState(false);
   const [studyTimeToday, setStudyTimeToday] = useState(0);
   const [intervalsRemaining, setIntervalsRemaining] = useState(1);
-  const [pausedTime, setPausedTime] = useState(0);
 
   const timerRef = useRef<typeof Timer | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const lastStatusRef = useRef<'work' | 'break' | null>(null);
-  const pauseTimeRef = useRef<number | null>(null);
-  const { isRunning, setIsRunning, runningCount, setRunningCount } = useTimerStore();
-  const { broadcastTimerUpdate, broadcastTimerSaved } = useTimerCommunication();
+  const pauseStartRef = useRef<number | null>(null);
+  const totalPausedMsRef = useRef<number>(0);
+  const { setIsRunning } = useTimerStore();
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    timerRef.current = new Timer(25, 1, 20);
+  // ── Log a completed work interval with clean duration math ──────────
+  const logWorkTime = useCallback(async () => {
+    if (startTimeRef.current === null) return;
+
+    const endTime = Date.now();
+    const wallClockMs = endTime - startTimeRef.current;
+    // Clean duration: wall-clock minus any time spent paused, capped at full work interval
+    const duration = Math.min(wallClockMs - totalPausedMsRef.current, WORK_MS);
+
+    try {
+      await axios.post("/api/timer-log", {
+        startTime: new Date(startTimeRef.current).toISOString(),
+        endTime: new Date(endTime).toISOString(),
+        duration: Math.max(0, duration),
+        activity,
+      });
+      fetchTodayStudyTime();
+    } catch (error) {
+      console.error("Error saving timer log: ", error);
+    }
+    timerComm.broadcast({ type: 'session-saved' });
+    startTimeRef.current = null;
+    totalPausedMsRef.current = 0;
+  }, [activity]);
+
+  // ── Initialize the pomodoro timer library ───────────────────────────
+  const initTimerLib = useCallback(() => {
+    timerRef.current = new Timer(WORK_MINUTES, BREAK_MINUTES, 20);
 
     timerRef.current.subscribe((currentTime: any) => {
       setTimerState({
@@ -85,15 +115,24 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
         logWorkTime();
       } else if (lastStatusRef.current === 'break' && currentTime.status === 'work') {
         startTimeRef.current = Date.now();
+        totalPausedMsRef.current = 0;
+        // Update session in localStorage
+        const session = getSession();
+        if (session && session.type === 'Pomodoro') {
+          saveSession({ ...session, pomodoroIntervalStart: Date.now(), totalPausedMs: 0 });
+        }
       }
       lastStatusRef.current = currentTime.status;
     });
+  }, [activity, isRunningLocal, logWorkTime]);
 
+  useEffect(() => {
+    initTimerLib();
     return () => {
       timerRef.current?.stop();
     };
-  }, [activity]);
-//if the timer runs out maybe just forcefully add 25 mins lmao rather than rely on stored time
+  }, [activity]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
     const seconds = time % 60;
@@ -114,21 +153,96 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
     }
   };
 
+  // ── Start / Pause / Stop ────────────────────────────────────────────
   const handleStart = () => {
+    const session: FocusSession = {
+      type: 'Pomodoro',
+      startedAt: Date.now(),
+      activity,
+      pomodoroIntervalStart: Date.now(),
+      isPaused: false,
+      totalPausedMs: 0,
+    };
+    saveSession(session);
     setIsRunningLocal(true);
-    const currentRunningCount = useTimerStore.getState().runningCount;
-    setRunningCount(currentRunningCount + 1);
     setIsRunning(true);
-    broadcastTimerUpdate();
-    setPausedTime(0);
+    timerComm.broadcast({ type: 'session-started' });
     timerRef.current.start();
     setIsPaused(false);
     startTimeRef.current = Date.now();
+    totalPausedMsRef.current = 0;
   };
 
-  // Pomodoro background recovery: force a UI update when tab becomes visible
-  // The timer-for-pomodoro library may have paused internally, but at minimum
-  // we ensure the displayed time catches up and document.title is updated
+  const handlePause = () => {
+    if (isPaused) {
+      // Resume
+      const pausedMs = Date.now() - (pauseStartRef.current ?? Date.now());
+      totalPausedMsRef.current += pausedMs;
+      timerRef.current.start();
+      setIsPaused(false);
+      // Update session
+      const session = getSession();
+      if (session) {
+        saveSession({
+          ...session,
+          isPaused: false,
+          pausedAt: null,
+          totalPausedMs: session.totalPausedMs + pausedMs,
+        });
+      }
+      timerComm.broadcast({ type: 'session-resumed' });
+    } else {
+      // Pause
+      timerRef.current.pause();
+      setIsPaused(true);
+      pauseStartRef.current = Date.now();
+      const session = getSession();
+      if (session) {
+        saveSession({ ...session, isPaused: true, pausedAt: Date.now() });
+      }
+      timerComm.broadcast({ type: 'session-paused' });
+    }
+  };
+
+  const confirmStop = () => {
+    setShowAlert(true);
+  };
+
+  const handleStop = async () => {
+    setShowAlert(false);
+
+    const elemStatus = document.getElementById('status-display');
+    if (elemStatus) elemStatus.textContent = 'Saving...';
+
+    timerRef.current.stop();
+    if (timerState?.status === "work") {
+      await logWorkTime();
+    }
+
+    clearSession();
+    setIsRunningLocal(false);
+    setIsRunning(false);
+    timerComm.broadcast({ type: 'session-stopped' });
+
+    // Reset timer library
+    initTimerLib();
+    setIntervalsRemaining(1);
+    startTimeRef.current = null;
+    totalPausedMsRef.current = 0;
+    document.title = 'Ally';
+
+    const elemTime = document.getElementById('time-display');
+    if (elemTime) elemTime.textContent = '25:00';
+    if (elemStatus) elemStatus.textContent = 'Focus';
+
+    queryClient.invalidateQueries({ queryKey: ['recent-sessions'] });
+    queryClient.invalidateQueries({ queryKey: ['graph'] });
+    queryClient.invalidateQueries({ queryKey: ['focused-trends'] });
+    queryClient.invalidateQueries({ queryKey: ['comparison'] });
+    queryClient.invalidateQueries({ queryKey: ['streak'] });
+  };
+
+  // ── Pomodoro background recovery ────────────────────────────────────
   const handleBackgroundTick = useCallback(() => {
     if (timerState) {
       const mins = Math.floor(timerState.raw / 60);
@@ -139,97 +253,59 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
 
   useBackgroundTimer(isRunningLocal && !isPaused, handleBackgroundTick, 1000);
 
-  const confirmStop = () => {
-    setShowAlert(true);
-  };
-
-  const handleStop = async () => {
-    setShowAlert(false);
-    
-    const elemStatus = document.getElementById('status-display');
-    if (elemStatus) {
-      elemStatus.textContent = 'Saving...';
-    }
-    const currentRunningCount = useTimerStore.getState().runningCount;
-    setRunningCount(Math.max(0, currentRunningCount - 1)); 
-    broadcastTimerUpdate();
-    timerRef.current.stop();
-    if (timerState?.status === "work") {
-      await logWorkTime();
-    }
-    resetTimer();
-    setIsRunningLocal(false);
-    const elemTime = document.getElementById('time-display');
-    if (elemTime) {
-      elemTime.textContent = '25:00';
-    }
-
-    if (elemStatus) {
-      elemStatus.textContent = 'Focus';
-    }
-
-    queryClient.invalidateQueries({ queryKey: ['recent-sessions'] });
-    queryClient.invalidateQueries({ queryKey: ['graph'] });
-    queryClient.invalidateQueries({ queryKey: ['focused-trends'] });
-    queryClient.invalidateQueries({ queryKey: ['comparison'] });
-    queryClient.invalidateQueries({ queryKey: ['streak'] });
-  };
-
-  const logWorkTime = async () => {
-    if (startTimeRef.current === null) return;
-
-    const endTime = Date.now();
-    const duration = endTime - startTimeRef.current;
-    try {
-      await axios.post("/api/timer-log", {
-        startTime: new Date(startTimeRef.current).toISOString(),
-        endTime: new Date(endTime).toISOString(),
-        duration: (duration * 0.97) - pausedTime - 2,
-        activity,
-      });
-      fetchTodayStudyTime();
-    } catch (error) {
-      console.error("Error saving timer log: ", error);
-    }
-    broadcastTimerSaved();
-    startTimeRef.current = null;
-  };
-
-  const resetTimer = () => {
-    timerRef.current = new Timer(25, 5, 20);
-    timerRef.current.subscribe((currentTime: any) => {
-      setTimerState({
-        raw: currentTime.timeRaw,
-        minutes: currentTime.minutes,
-        seconds: currentTime.seconds,
-        rounds: currentTime.rounds,
-        status: currentTime.status,
-      });
-      setIntervalsRemaining(21 - currentTime.rounds);
-
-      if (lastStatusRef.current === 'work' && currentTime.status === 'break') {
-        logWorkTime();
-      } else if (lastStatusRef.current === 'break' && currentTime.status === 'work') {
-        startTimeRef.current = Date.now();
+  // ── Restore session on mount (best-effort for pomodoro) ─────────────
+  useEffect(() => {
+    const session = getSession();
+    if (session && session.type === 'Pomodoro') {
+      // Pomodoro can't perfectly restore the timer library's internal state,
+      // so we log any interrupted work interval and show as running
+      // The timer library will start fresh, but the session is preserved
+      setIsRunningLocal(true);
+      setActivity(session.activity);
+      setIsRunning(true);
+      if (session.pomodoroIntervalStart) {
+        startTimeRef.current = session.pomodoroIntervalStart;
+        totalPausedMsRef.current = session.totalPausedMs;
       }
-      lastStatusRef.current = currentTime.status;
-    });
-    setIntervalsRemaining(1);
-    startTimeRef.current = null;
-  };
-
-  const handlePause = () => {
-    if (isPaused) {
-      timerRef.current.start();
-      setIsPaused(false);
-      setPausedTime(pausedTime + (Date.now() - (pauseTimeRef.current ?? Date.now())))
-    } else {
-      timerRef.current.pause();
-      setIsPaused(true);  
-      pauseTimeRef.current = Date.now();
+      if (session.isPaused) {
+        setIsPaused(true);
+        pauseStartRef.current = session.pausedAt ?? null;
+      } else {
+        timerRef.current?.start();
+      }
     }
-  }
 
+    const unsub = timerComm.subscribe((msg) => {
+      if (msg.type === 'session-stopped' || msg.type === 'session-saved') {
+        // Another tab stopped the session
+        const s = getSession();
+        if (!s) {
+          setIsRunningLocal(false);
+          document.title = 'Ally';
+          fetchTodayStudyTime();
+        }
+      }
+    });
+
+    return () => { unsub(); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Warn before unload ──────────────────────────────────────────────
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (isRunningLocal) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isRunningLocal]);
+
+  // ── Fetch today's study time ────────────────────────────────────────
   const fetchTodayStudyTime = async () => {
     try {
       const response = await fetch('/api/timer-log', {
@@ -244,43 +320,6 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
       console.error('Error fetching today\'s study time:', error);
     }
   };
-
-  useEffect(() => {
-    if (runningCount <= 0) {
-      setIsRunning(false);
-    } else {
-      setIsRunning(true);
-    }
-  }, [runningCount, setIsRunning]);
-
-  useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (isRunningLocal) {
-        event.preventDefault();
-        event.returnValue = '';  
-      }
-    };
-
-    const handleUnload = () => {
-      if (isRunningLocal) {
-        
-        const currentRunningCount = useTimerStore.getState().runningCount;
-        setRunningCount(Math.max(0, currentRunningCount - 1));
-        if (runningCount === 1) {
-          setIsRunning(false);
-        }
-        broadcastTimerUpdate();
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('unload', handleUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('unload', handleUnload);
-    };
-  }, [isRunningLocal, runningCount, broadcastTimerUpdate, setIsRunning, setRunningCount]);
 
   useEffect(() => {
     fetchTodayStudyTime();

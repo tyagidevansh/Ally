@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from "react";
+import { getSession } from "@/lib/focus-session";
 import Navbar from "@/components/navbar";
 import Stopwatch from "@/components/stopwatch";
 import Timer from "@/components/timer";
@@ -34,7 +35,10 @@ const environments: Environment[] = [
 ];
 
 const Home = () => {
-  const [selectedComponent, setSelectedComponent] = useState("Stopwatch");
+  const [selectedComponent, setSelectedComponent] = useState<string>(() => {
+    const session = getSession();
+    return session?.type ?? "Stopwatch";
+  });
   const [quote, setQuote] = useState("");
   const [currentEnv, setCurrentEnv] = useState<Environment>(environments[0]);
   const sliderRef = useRef<any>(null);

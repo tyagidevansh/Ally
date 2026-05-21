@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback} from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useBackgroundTimer } from "@/hooks/use-background-timer";
 import { Button } from "./ui/button";
 import axios from "axios";
@@ -26,7 +26,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useNotifications } from "@/hooks/use-notification";
-import { useTimerCommunication } from "@/lib/timer-communication";
+import { getSession, saveSession, clearSession, getElapsedMs, getTimerRemainingSecs, FocusSession } from "@/lib/focus-session";
+import { timerComm } from "@/lib/timer-communication";
 
 interface TimerProps {
   onChangeTimer: (value: string) => void;
@@ -39,16 +40,13 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [studyTimeToday, setStudyTimeToday] = useState(0);
-  const svgRef = useRef<SVGSVGElement | null>(null);
-  const timerRef = useRef<number | null>(null);
-  const startTimeRef = useRef<number | null>(null);
-  const selectedTimeRef = useRef<number>(10800);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const { isRunning, setIsRunning, runningCount, setRunningCount } = useTimerStore();
-  const { broadcastTimerUpdate, broadcastTimerSaved } = useTimerCommunication();
   const [isRunningLocal, setIsRunningLocal] = useState(false);
-  const queryClient = useQueryClient();
 
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const intervalRef = useRef<number | null>(null);
+  const selectedDurationRef = useRef<number>(600); // the user-chosen duration in seconds
+  const { setIsRunning } = useTimerStore();
+  const queryClient = useQueryClient();
   const router = useRouter();
   const { sendNotification } = useNotifications();
 
@@ -84,98 +82,43 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     }
   };
 
-  const updateTimer = useCallback(() => {
-    if (startTimeRef.current !== null) {
-      const elapsedTime = Math.floor((Date.now() - startTimeRef.current) / 1000);
-      const newTimeLeft = Math.max(0, selectedTimeRef.current - elapsedTime);
-      setTimeLeft(newTimeLeft);
-      
-      if (newTimeLeft === 0) {
-        stopTimer();
-        sendNotification("Timer completed!", {body: "Restart the timer if you want to keep going", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
-      } else {
-        timerRef.current = requestAnimationFrame(updateTimer);
-      }
-    }
-  }, [activity]);
+  // ── Timer completion (auto-save with intended duration) ──────────────
+  const completeTimer = useCallback(async () => {
+    const session = getSession();
+    if (!session || session.type !== 'Timer') return;
 
-  // Recalculate time and update title when tab becomes visible (mobile background recovery)
-  const handleBackgroundTick = useCallback(() => {
-    if (startTimeRef.current !== null) {
-      const elapsedTime = Math.floor((Date.now() - startTimeRef.current) / 1000);
-      const newTimeLeft = Math.max(0, selectedTimeRef.current - elapsedTime);
-      setTimeLeft(newTimeLeft);
-      document.title = `${formatTime(newTimeLeft)} | Ally`;
+    const intendedDurationMs = (session.timerDurationSecs ?? 0) * 1000;
+    const endTime = session.startedAt + intendedDurationMs + session.totalPausedMs;
 
-      if (newTimeLeft === 0) {
-        stopTimer();
-        sendNotification("Timer completed!", {body: "Restart the timer if you want to keep going", icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'});
-      }
-    }
-  }, [activity]);
-
-  // This hook handles mobile background recovery via visibilitychange + fallback interval
-  useBackgroundTimer(isRunningLocal, handleBackgroundTick, 1000);
-  
-  const startTimer = useCallback(() => {
-    startTimeRef.current = Date.now();
-    selectedTimeRef.current = timeLeft;
-    setIsRunningLocal(true);
-    const currentRunningCount = useTimerStore.getState().runningCount;
-    setRunningCount(currentRunningCount + 1);
-    setIsRunning(true);
-    broadcastTimerUpdate();
-    setTotalTime(timeLeft);
-    timerRef.current = requestAnimationFrame(updateTimer);
-
-    const intervalId = setInterval(() => {
-      const elapsedTime = Math.floor((Date.now() - startTimeRef.current!) / 1000);
-      const newTimeLeft = Math.max(0, selectedTimeRef.current - elapsedTime);
-      document.title = `${formatTime(newTimeLeft)} | Ally`;
-    }, 1000);
-  
-    intervalRef.current = intervalId;
-  }, [updateTimer, setIsRunning, timeLeft, formatTime]);
-  
-  const stopTimer = useCallback(async () => {
-    if (timerRef.current !== null) {
-      cancelAnimationFrame(timerRef.current);
-    }
+    clearSession();
+    setIsRunningLocal(false);
+    setIsRunning(false);
     if (intervalRef.current !== null) {
       clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
+    document.title = "Ally";
+    setTimeLeft(selectedDurationRef.current);
+    setTotalTime(10800);
 
-    const currentRunningCount = useTimerStore.getState().runningCount;
-    setRunningCount(Math.max(0, currentRunningCount - 1)) 
+    sendNotification("Timer completed!", {
+      body: "Restart the timer if you want to keep going",
+      icon: 'https://img.freepik.com/premium-vector/correct-time-icon-clock-icon-with-check-sign-clock-icon-approved-confirm-done-tick-completed-symbol-correct-icon-time-24-accept-agree-apply-approved-back-business-change_995545-153.jpg'
+    });
 
-    const button = document.getElementById("stopButton");
-    if (button) {
-      button.innerText = "Saving...";
-    }
-
-    broadcastTimerUpdate();
-    const endTime = Date.now();
-    const duration = endTime - (startTimeRef.current ?? endTime);
-    
     try {
-      const response = await axios.post("/api/timer-log", {
-        startTime: new Date(startTimeRef.current ?? endTime).toISOString(),
+      await axios.post("/api/timer-log", {
+        startTime: new Date(session.startedAt).toISOString(),
         endTime: new Date(endTime).toISOString(),
-        duration,
-        activity,
+        duration: intendedDurationMs,
+        activity: session.activity,
       });
     } catch (error) {
       console.error("Error saving timer log: ", error);
     }
-    
-    broadcastTimerSaved();
 
-    setIsRunningLocal(false);
-    startTimeRef.current = null;
-    setTimeLeft(selectedTimeRef.current);
-    setTotalTime(10800);
-    document.title = "Ally";
-    
+    timerComm.broadcast({ type: 'session-saved' });
+
     queryClient.invalidateQueries({ queryKey: ['recent-sessions'] });
     queryClient.invalidateQueries({ queryKey: ['graph'] });
     queryClient.invalidateQueries({ queryKey: ['focused-trends'] });
@@ -183,56 +126,180 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     queryClient.invalidateQueries({ queryKey: ['streak'] });
 
     router.refresh();
-  }, [setIsRunningLocal, activity, router]);
-  
+    fetchTodayStudyTime();
+  }, [setIsRunning, router, queryClient, sendNotification]);
+
+  // ── Ticking ──────────────────────────────────────────────────────────
+  const clearTicking = useCallback(() => {
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  const startTicking = useCallback(() => {
+    clearTicking();
+    const tick = () => {
+      const s = getSession();
+      if (s && s.type === 'Timer') {
+        const remaining = getTimerRemainingSecs(s);
+        setTimeLeft(remaining);
+        document.title = `${formatTime(remaining)} | Ally`;
+        if (remaining <= 0) {
+          completeTimer();
+        }
+      }
+    };
+    tick();
+    intervalRef.current = window.setInterval(tick, 1000);
+  }, [clearTicking, completeTimer]);
+
+  // Background recovery: recalculate when tab becomes visible
+  const handleBackgroundTick = useCallback(() => {
+    const s = getSession();
+    if (s && s.type === 'Timer') {
+      const remaining = getTimerRemainingSecs(s);
+      setTimeLeft(remaining);
+      document.title = `${formatTime(remaining)} | Ally`;
+      if (remaining <= 0) {
+        completeTimer();
+      }
+    }
+  }, [completeTimer]);
+
+  useBackgroundTimer(isRunningLocal, handleBackgroundTick, 1000);
+
+  // ── Restore session on mount + cross-tab sync ────────────────────────
+  useEffect(() => {
+    const session = getSession();
+    if (session && session.type === 'Timer') {
+      const remaining = getTimerRemainingSecs(session);
+      if (remaining <= 0) {
+        // Timer already expired while we were away — auto-save
+        completeTimer();
+      } else {
+        setIsRunningLocal(true);
+        setActivity(session.activity);
+        setIsRunning(true);
+        selectedDurationRef.current = session.timerDurationSecs ?? 600;
+        setTotalTime(session.timerDurationSecs ?? 10800);
+        setTimeLeft(remaining);
+        startTicking();
+      }
+    }
+
+    const unsub = timerComm.subscribe((msg) => {
+      if (msg.type === 'session-stopped' || msg.type === 'session-saved') {
+        setIsRunningLocal(false);
+        clearTicking();
+        document.title = 'Ally';
+        setTimeLeft(selectedDurationRef.current);
+        setTotalTime(10800);
+        fetchTodayStudyTime();
+      } else if (msg.type === 'session-started') {
+        const s = getSession();
+        if (s && s.type === 'Timer') {
+          setIsRunningLocal(true);
+          setActivity(s.activity);
+          setIsRunning(true);
+          selectedDurationRef.current = s.timerDurationSecs ?? 600;
+          setTotalTime(s.timerDurationSecs ?? 10800);
+          startTicking();
+        }
+      }
+    });
+
+    return () => {
+      unsub();
+      clearTicking();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Start / Stop ─────────────────────────────────────────────────────
+  const startTimer = useCallback(() => {
+    const session: FocusSession = {
+      type: 'Timer',
+      startedAt: Date.now(),
+      activity,
+      timerDurationSecs: timeLeft,
+      isPaused: false,
+      totalPausedMs: 0,
+    };
+    saveSession(session);
+    selectedDurationRef.current = timeLeft;
+    setTotalTime(timeLeft);
+    setIsRunningLocal(true);
+    setIsRunning(true);
+    timerComm.broadcast({ type: 'session-started' });
+    startTicking();
+  }, [activity, timeLeft, setIsRunning, startTicking]);
+
+  const stopTimer = useCallback(async () => {
+    const session = getSession();
+    if (!session) return;
+
+    const button = document.getElementById("stopButton");
+    if (button) button.innerText = "Saving...";
+
+    const endTime = Date.now();
+    const duration = getElapsedMs(session);
+
+    clearSession();
+    setIsRunningLocal(false);
+    setIsRunning(false);
+    clearTicking();
+    document.title = "Ally";
+    setTimeLeft(selectedDurationRef.current);
+    setTotalTime(10800);
+
+    try {
+      await axios.post("/api/timer-log", {
+        startTime: new Date(session.startedAt).toISOString(),
+        endTime: new Date(endTime).toISOString(),
+        duration,
+        activity: session.activity,
+      });
+    } catch (error) {
+      console.error("Error saving timer log: ", error);
+    }
+
+    timerComm.broadcast({ type: 'session-saved' });
+
+    queryClient.invalidateQueries({ queryKey: ['recent-sessions'] });
+    queryClient.invalidateQueries({ queryKey: ['graph'] });
+    queryClient.invalidateQueries({ queryKey: ['focused-trends'] });
+    queryClient.invalidateQueries({ queryKey: ['comparison'] });
+    queryClient.invalidateQueries({ queryKey: ['streak'] });
+
+    router.refresh();
+    fetchTodayStudyTime();
+  }, [router, setIsRunning, clearTicking, queryClient]);
+
+  // ── Cleanup ──────────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
-      if (timerRef.current !== null) {
-        cancelAnimationFrame(timerRef.current);
-      }
       if (intervalRef.current !== null) {
         clearInterval(intervalRef.current);
       }
     };
   }, []);
 
-  useEffect(() => {
-    if (runningCount <= 0) {
-      setIsRunning(false);
-    } else {
-      setIsRunning(true);
-    }
-  }, [runningCount, setIsRunning]);
-
+  // ── Warn before unload ──────────────────────────────────────────────
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (isRunningLocal) {
         event.preventDefault();
-        event.returnValue = '';  
-      }
-    };
-
-    const handleUnload = () => {
-      if (isRunningLocal) {
-        
-        const currentRunningCount = useTimerStore.getState().runningCount;
-        setRunningCount(Math.max(0, currentRunningCount - 1));
-        if (runningCount === 1) {
-          setIsRunning(false);
-        }
-        broadcastTimerUpdate();
+        event.returnValue = '';
       }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('unload', handleUnload);
-
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('unload', handleUnload);
     };
-  }, [isRunningLocal, runningCount, broadcastTimerUpdate, setIsRunning, setRunningCount]);
+  }, [isRunningLocal]);
 
+  // ── Drag-to-set-time (circular dial) ────────────────────────────────
   const percentage = (timeLeft / totalTime) * 100;
   const circumference = 2 * Math.PI * 118;
   const offset = circumference - (percentage / 100) * circumference;
@@ -251,17 +318,16 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
     let angle = Math.atan2(dy, dx);
     if (angle < 0) angle += 2 * Math.PI;
 
-    let percentage = (-angle / (2 * Math.PI)) * 100; //angle negative to correct for direction
-    percentage = (100 - percentage + 25) % 100;
+    let pct = (-angle / (2 * Math.PI)) * 100; //angle negative to correct for direction
+    pct = (100 - pct + 25) % 100;
 
-    let newTime = Math.round((percentage / 100) * totalTime);
+    let newTime = Math.round((pct / 100) * totalTime);
     newTime = Math.round(newTime / 600) * 600; //round to nearest 10 minutes
     newTime = Math.max(600, Math.min(newTime, totalTime)); //clamp between 10 minutes and 3 hours
 
     setTimeLeft(newTime);
-    selectedTimeRef.current = newTime;
+    selectedDurationRef.current = newTime;
   };
-
 
   const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!isRunningLocal) {
@@ -459,7 +525,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
             <SelectTrigger
               className={`w-full ${isRunningLocal ? 'opacity-50 cursor-not-allowed text-gray-900 dark:text-gray-500' : 'bg-white/30 backdrop-blur-md'} border-none`}
             >
-              <SelectValue placeholder="Stopwatch" />
+              <SelectValue placeholder="Study" />
             </SelectTrigger>
             <SelectContent className="bg-white/20 backdrop-blur-md text-white">
               <SelectItem value="Study">Study</SelectItem>

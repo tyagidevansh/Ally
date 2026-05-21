@@ -3,8 +3,9 @@ import Image from 'next/image';
 import { UserButton } from '@clerk/nextjs';
 import { Timer, TimerOff, BarChart2, BookOpen, PenTool, Menu } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useTimerCommunication } from '@/lib/timer-communication';
 import useTimerStore from "@/store/timerStore";
+import { timerComm } from '@/lib/timer-communication';
+import { getSession } from '@/lib/focus-session';
 import { ModeToggle } from './mode-toggle';
 import { useTheme } from 'next-themes';
 import { Button } from './ui/button';
@@ -19,12 +20,13 @@ const Navbar = ({ showToggle, linksInNewTab }: NavbarProps) => {
   const [isClient, setIsClient] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const { isRunning, runningCount, broadcastTimerUpdate } = useTimerCommunication();
-  const {setRunningCount} = useTimerStore();
+  const { isRunning, setIsRunning, syncFromSession } = useTimerStore();
   const { theme } = useTheme();
 
   useEffect(() => {
     setIsClient(true);
+    // On mount, sync isRunning from the localStorage session
+    syncFromSession();
 
     const handleScroll = () => {
       const isScrolled = window.scrollY > 10;
@@ -34,22 +36,29 @@ const Navbar = ({ showToggle, linksInNewTab }: NavbarProps) => {
     };
 
     window.addEventListener('scroll', handleScroll);
+
+    // Listen for cross-tab messages to keep isRunning in sync
+    const unsub = timerComm.subscribe(() => {
+      syncFromSession();
+    });
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      unsub();
     };
-  }, [scrolled]);
+  }, [scrolled]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Sync isFocusing status to the server
   useEffect(() => {
-    const isNowRunning = runningCount > 0;
     const syncFocusStatus = async () => {
       try {
-        await axios.put("/api/profile/focus", { isFocusing: isNowRunning });
+        await axios.put("/api/profile/focus", { isFocusing: isRunning });
       } catch (error) {
         console.error("Failed to sync focus status:", error);
       }
     };
     syncFocusStatus();
-  }, [runningCount]);
+  }, [isRunning]);
 
   const getLogoSrc = () => {
     if (showToggle) {
@@ -81,8 +90,8 @@ const Navbar = ({ showToggle, linksInNewTab }: NavbarProps) => {
           <Link
             href="/"
             className="hover:opacity-80 transition-opacity"
-            target={runningCount > 0 || linksInNewTab ? '_blank' : '_self'}
-            rel={runningCount > 0 || linksInNewTab ? 'noopener noreferrer' : undefined}
+            target={isRunning || linksInNewTab ? '_blank' : '_self'}
+            rel={isRunning || linksInNewTab ? 'noopener noreferrer' : undefined}
           >
             <div className="relative w-16 h-10 md:mr-6">
               <Image
@@ -114,16 +123,13 @@ const Navbar = ({ showToggle, linksInNewTab }: NavbarProps) => {
           {isClient && (
             <div
               className="text-green-600 dark:text-green-400 relative"
-              title={`${runningCount} timer${runningCount === 1 ? '' : 's'} running.\nClick to reset count to 0 \n(without stopping any timers)`}
+              title={isRunning ? "A focus session is active" : "No active session"}
             >
-              {runningCount > 0 ? (
-                <Button 
-                  className='text-green-600 p-0 bg-transparent'
-                  onClick={() => {setRunningCount(0); broadcastTimerUpdate();}}
-                >
+              {isRunning ? (
+                <div className="relative">
                   <Timer size={24} />
                   <span className="absolute top-7 right-0 w-3 h-3 bg-red-500 dark:bg-red-500 rounded-full border-2 border-white dark:border-gray-900" style={{ transform: 'translate(50%, -50%)' }} />
-                </Button>
+                </div>
               ) : (
                 <TimerOff size={24} />
               )}
