@@ -69,14 +69,20 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
   const logWorkTime = useCallback(async () => {
     if (startTimeRef.current === null) return;
 
+    // Capture and immediately clear so any concurrent call sees null and bails
+    const intervalStart = startTimeRef.current;
+    const pausedMs = totalPausedMsRef.current;
+    startTimeRef.current = null;
+    totalPausedMsRef.current = 0;
+
     const endTime = Date.now();
-    const wallClockMs = endTime - startTimeRef.current;
+    const wallClockMs = endTime - intervalStart;
     // Clean duration: wall-clock minus any time spent paused, capped at full work interval
-    const duration = Math.min(wallClockMs - totalPausedMsRef.current, WORK_MS);
+    const duration = Math.min(wallClockMs - pausedMs, WORK_MS);
 
     try {
       await axios.post("/api/timer-log", {
-        startTime: new Date(startTimeRef.current).toISOString(),
+        startTime: new Date(intervalStart).toISOString(),
         endTime: new Date(endTime).toISOString(),
         duration: Math.max(0, duration),
         activity,
@@ -86,8 +92,6 @@ const PomodoroComponent = ({ onChangeTimer }: PomodoroComponentProps) => {
       console.error("Error saving timer log: ", error);
     }
     timerComm.broadcast({ type: 'session-saved' });
-    startTimeRef.current = null;
-    totalPausedMsRef.current = 0;
   }, [activity]);
 
   // ── Initialize the pomodoro timer library ───────────────────────────

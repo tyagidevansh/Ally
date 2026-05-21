@@ -42,6 +42,7 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
   const [isRunningLocal, setIsRunningLocal] = useState(false);
 
   const intervalRef = useRef<number | null>(null);
+  const isSavingRef = useRef(false); // prevents concurrent save calls
   const router = useRouter();
   const { setIsRunning } = useTimerStore();
   const queryClient = useQueryClient();
@@ -163,8 +164,10 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
   }, [activity, setIsRunning, startTicking]);
 
   const stopTimer = useCallback(async () => {
+    if (isSavingRef.current) return;
     const session = getSession();
     if (!session) return;
+    isSavingRef.current = true;
 
     const button = document.getElementById("stopButton");
     if (button) button.innerText = "Saving...";
@@ -187,6 +190,8 @@ const Stopwatch = ({ autoStart = false, onChangeTimer, initialActivity = "Study"
       });
     } catch (error) {
       console.error("Error saving timer log:", error);
+    } finally {
+      isSavingRef.current = false;
     }
 
     timerComm.broadcast({ type: 'session-saved' });

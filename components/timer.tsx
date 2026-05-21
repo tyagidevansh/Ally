@@ -45,6 +45,7 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const intervalRef = useRef<number | null>(null);
   const selectedDurationRef = useRef<number>(600); // the user-chosen duration in seconds
+  const isSavingRef = useRef(false); // prevents concurrent save calls
   const { setIsRunning } = useTimerStore();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -84,8 +85,11 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
 
   // ── Timer completion (auto-save with intended duration) ──────────────
   const completeTimer = useCallback(async () => {
+    // Guard: prevent concurrent calls (interval tick + backgroundTimer both hitting 0)
+    if (isSavingRef.current) return;
     const session = getSession();
     if (!session || session.type !== 'Timer') return;
+    isSavingRef.current = true;
 
     const intendedDurationMs = (session.timerDurationSecs ?? 0) * 1000;
     const endTime = session.startedAt + intendedDurationMs + session.totalPausedMs;
@@ -115,6 +119,8 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
       });
     } catch (error) {
       console.error("Error saving timer log: ", error);
+    } finally {
+      isSavingRef.current = false;
     }
 
     timerComm.broadcast({ type: 'session-saved' });
@@ -146,6 +152,8 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
         setTimeLeft(remaining);
         document.title = `${formatTime(remaining)} | Ally`;
         if (remaining <= 0) {
+          // Stop the interval immediately so it doesn't fire again while completeTimer awaits
+          clearTicking();
           completeTimer();
         }
       }
@@ -235,8 +243,10 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
   }, [activity, timeLeft, setIsRunning, startTicking]);
 
   const stopTimer = useCallback(async () => {
+    if (isSavingRef.current) return;
     const session = getSession();
     if (!session) return;
+    isSavingRef.current = true;
 
     const button = document.getElementById("stopButton");
     if (button) button.innerText = "Saving...";
@@ -261,6 +271,8 @@ const Timer = ({ onChangeTimer }: TimerProps) => {
       });
     } catch (error) {
       console.error("Error saving timer log: ", error);
+    } finally {
+      isSavingRef.current = false;
     }
 
     timerComm.broadcast({ type: 'session-saved' });
