@@ -2,10 +2,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { UserButton } from '@clerk/nextjs';
 import { Timer, TimerOff, BarChart2, BookOpen, PenTool, Menu } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { getElapsedMs, getTimerRemainingSecs, getSession } from '@/lib/focus-session';
 import useTimerStore from "@/store/timerStore";
 import { timerComm } from '@/lib/timer-communication';
-import { getSession } from '@/lib/focus-session';
+
 import { ModeToggle } from './mode-toggle';
 import { useTheme } from 'next-themes';
 import { Button } from './ui/button';
@@ -20,33 +21,98 @@ const Navbar = ({ showToggle, linksInNewTab }: NavbarProps) => {
   const [isClient, setIsClient] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [liveTime, setLiveTime] = useState('');
+  const [isHovered, setIsHovered] = useState(false);
+  const tickRef = useRef<number | null>(null);
   const { isRunning, setIsRunning, syncFromSession } = useTimerStore();
   const { theme } = useTheme();
 
+  // Format elapsed ms → "1:23:45" or "12:34"
+  const formatElapsed = (ms: number) => {
+    const totalSecs = Math.floor(ms / 1000);
+    const h = Math.floor(totalSecs / 3600);
+    const m = Math.floor((totalSecs % 3600) / 60);
+    const s = totalSecs % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  };
+
+  // Format remaining secs → "1:23:45" or "12:34"
+  const formatRemaining = (secs: number) => {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  };
+
+  const computeLiveTime = () => {
+    const session = getSession();
+    if (!session) return '';
+    if (session.type === 'Stopwatch') {
+      return formatElapsed(getElapsedMs(session));
+    }
+    if (session.type === 'Timer') {
+      return formatRemaining(getTimerRemainingSecs(session));
+    }
+    // Pomodoro: no reliable remaining time without the library — show elapsed in session
+    return formatElapsed(getElapsedMs(session));
+  };
+
   useEffect(() => {
     setIsClient(true);
-    // On mount, sync isRunning from the localStorage session
     syncFromSession();
 
     const handleScroll = () => {
       const isScrolled = window.scrollY > 10;
-      if (isScrolled !== scrolled) {
-        setScrolled(isScrolled);
-      }
+      if (isScrolled !== scrolled) setScrolled(isScrolled);
     };
 
     window.addEventListener('scroll', handleScroll);
 
-    // Listen for cross-tab messages to keep isRunning in sync
+    // BroadcastChannel: fast same-origin signal when timer changes
     const unsub = timerComm.subscribe(() => {
       syncFromSession();
     });
 
+    // storage event: reliable cross-tab fallback — fires in OTHER tabs
+    // whenever localStorage changes, no subscription timing issues
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'ally-focus-session') {
+        syncFromSession();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('storage', handleStorage);
       unsub();
     };
   }, [scrolled]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Tick the live time every second, only while running
+  useEffect(() => {
+    if (!isRunning) {
+      setLiveTime('');
+      if (tickRef.current !== null) {
+        clearInterval(tickRef.current);
+        tickRef.current = null;
+      }
+      return;
+    }
+    // Compute immediately so there's no 1-second blank
+    setLiveTime(computeLiveTime());
+    tickRef.current = window.setInterval(() => {
+      setLiveTime(computeLiveTime());
+    }, 1000);
+    return () => {
+      if (tickRef.current !== null) {
+        clearInterval(tickRef.current);
+        tickRef.current = null;
+      }
+    };
+  }, [isRunning]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync isFocusing status to the server
   useEffect(() => {
@@ -104,15 +170,15 @@ const Navbar = ({ showToggle, linksInNewTab }: NavbarProps) => {
           </Link>
 
           <div className="hidden md:flex items-center space-x-6">
-            <Link href="/dashboard" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors" target={linksInNewTab ? '_blank' : undefined} rel={linksInNewTab ? 'noopener noreferrer' : undefined}>
+            <Link href="/dashboard" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors">
               <BarChart2 size={18} />
               <span>Dashboard</span>
             </Link>
-            <Link href="/focus" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors" target={linksInNewTab ? '_blank' : undefined} rel={linksInNewTab ? 'noopener noreferrer' : undefined}>
+            <Link href="/focus" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors">
               <BookOpen size={18} />
               <span>Focus</span>
             </Link>
-            <Link href="/journal" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors" target={linksInNewTab ? '_blank' : undefined} rel={linksInNewTab ? 'noopener noreferrer' : undefined}>
+            <Link href="/journal" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors">
               <PenTool size={18} />
               <span>Journal</span>
             </Link>
@@ -123,7 +189,8 @@ const Navbar = ({ showToggle, linksInNewTab }: NavbarProps) => {
           {isClient && (
             <div
               className="text-green-600 dark:text-green-400 relative"
-              title={isRunning ? "A focus session is active" : "No active session"}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
             >
               {isRunning ? (
                 <div className="relative">
@@ -132,6 +199,15 @@ const Navbar = ({ showToggle, linksInNewTab }: NavbarProps) => {
                 </div>
               ) : (
                 <TimerOff size={24} />
+              )}
+
+              {/* Tooltip */}
+              {isHovered && (
+                <div className="absolute right-0 top-8 z-50 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap pointer-events-none
+                  bg-gray-900/90 text-white dark:bg-white/90 dark:text-gray-900
+                  shadow-lg backdrop-blur-sm">
+                  {isRunning && liveTime ? liveTime : 'No timers running'}
+                </div>
               )}
             </div>
           )}
@@ -147,15 +223,15 @@ const Navbar = ({ showToggle, linksInNewTab }: NavbarProps) => {
             showToggle ? 'text-black' : 'text-white'
           } dark:text-white`}
         >          
-          <Link href="/dashboard" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors" target={linksInNewTab ? '_blank' : undefined} rel={linksInNewTab ? 'noopener noreferrer' : undefined}>
+          <Link href="/dashboard" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors">
             <BarChart2 size={18} />
             <span>Dashboard</span>
           </Link>
-          <Link href="/focus" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors" target={linksInNewTab ? '_blank' : undefined} rel={linksInNewTab ? 'noopener noreferrer' : undefined}>
+          <Link href="/focus" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors">
             <BookOpen size={18} />
             <span>Focus</span>
           </Link>
-          <Link href="/journal" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors" target={linksInNewTab ? '_blank' : undefined} rel={linksInNewTab ? 'noopener noreferrer' : undefined}>
+          <Link href="/journal" className="flex items-center space-x-1 hover:text-green-600 dark:hover:text-green-400 transition-colors">
             <PenTool size={18} />
             <span>Journal</span>
           </Link>

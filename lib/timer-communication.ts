@@ -25,12 +25,23 @@ class TimerCommunication {
       this.channel.onmessage = (event: MessageEvent) => {
         const msg = event.data as TimerMessage;
         this.listeners.forEach(fn => fn(msg));
+
+        // Re-dispatch as a window event so the dashboard (and any other
+        // page listening on 'timer-saved') knows to re-fetch its data.
+        if (msg.type === 'session-saved' || msg.type === 'session-stopped') {
+          window.dispatchEvent(new Event('timer-saved'));
+        }
       };
     }
   }
 
   broadcast(msg: TimerMessage) {
     this.channel?.postMessage(msg);
+    // Also fire locally — BroadcastChannel doesn't echo to the sender tab,
+    // so listeners on this same page won't hear it otherwise.
+    if (typeof window !== 'undefined' && (msg.type === 'session-saved' || msg.type === 'session-stopped')) {
+      window.dispatchEvent(new Event('timer-saved'));
+    }
   }
 
   subscribe(fn: (msg: TimerMessage) => void): () => void {

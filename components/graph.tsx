@@ -453,16 +453,11 @@ const Graph = () => {
   }, []);
 
   const formatYAxis = useCallback((milliseconds: number) => {
-    let timeStr = formatTime(milliseconds);
-
-    for (let i = 1; i < timeStr.length; i++) {
-      if (timeStr[i] === "0" && timeStr[i - 1] === "0") {
-        timeStr = timeStr.slice(0, i - 2);
-        break;
-      }
-    }
-
-    return timeStr;
+    const totalMins = milliseconds / 60000;
+    if (totalMins === 0) return '0';
+    if (totalMins < 60) return `${Math.round(totalMins)}m`;
+    const hours = totalMins / 60;
+    return Number.isInteger(hours) ? `${hours}h` : `${hours}h`;
   }, []);
 
   // Memoized tooltip component
@@ -711,7 +706,7 @@ const Graph = () => {
                 tickFormatter={formatYAxis}
                 tickLine={false}
                 axisLine={false}
-                width={70}
+                width={52}
                 ticks={ticks}
                 tick={{ fontSize: 12 }}
               />
