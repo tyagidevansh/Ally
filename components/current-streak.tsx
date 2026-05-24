@@ -1,29 +1,22 @@
-import { useEffect, useState } from "react";
+'use client';
+
 import { Flame } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 interface StreakData {
+  currentStreak: number;
+  bestStreak: number;
   streakStartDate: number;
   streakLastDate: number;
-  bestStreak: number;
   todayTime: number;
-  yesterdayTime: number;
   dailyGoal: number;
   allHabitsDone: boolean;
   todayHabitCount: number;
   completedHabitCount: number;
 }
 
-interface PostStreakData {
-  streakStart?: number;
-  streakLast?: number;
-  bestStreak?: number;
-}
-
 const CurrentStreak = () => {
-  const [currentStreak, setCurrentStreak] = useState<number>(0);
-
-  const { data: streakData, isLoading: loading } = useQuery<StreakData>({
+  const { data: streakData, isLoading } = useQuery<StreakData>({
     queryKey: ['streak'],
     queryFn: async () => {
       const res = await fetch('/api/current-streak');
@@ -32,83 +25,35 @@ const CurrentStreak = () => {
     },
   });
 
-  useEffect(() => {
-    if (streakData) {
-      calculateStreak(streakData);
-    }
-  }, [streakData]);
-
-  const calculateStreak = (data: StreakData) => {
-    const { streakStartDate, streakLastDate, todayTime, dailyGoal, bestStreak, allHabitsDone } = data;
-    const today = new Date().setHours(0, 0, 0, 0);
-    const streakStart = new Date(streakStartDate).setHours(0, 0, 0, 0);
-    const streakLast = new Date(streakLastDate).setHours(0, 0, 0, 0);
-
-    // Day is complete only when focus goal is met AND all habits are done
-    const dayComplete = todayTime >= dailyGoal && allHabitsDone;
-
-    let currentStreak = 0;
-
-    if (streakStart === today && streakLast === today) {
-      if (dayComplete) {
-        currentStreak = 1;
-      }
-    } 
-    else {
-      const daysBetween = Math.floor((streakLast - streakStart) / (1000 * 60 * 60 * 24));
-      currentStreak = daysBetween + 1;
-
-      if (dayComplete) {
-        updateStreakData({
-          streakLast: Date.now(),
-        });
-      }
-    }
-
-    setCurrentStreak(currentStreak);
-
-    if (currentStreak > bestStreak) {
-      updateStreakData({
-        bestStreak: currentStreak,
-        streakLast: Date.now(),
-      });
-    }
-  };
-
-  const updateStreakData = async (data: PostStreakData) => {
-    try {
-      const res = await fetch('/api/current-streak', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to update streak');
-      }
-    } catch (error) {
-      console.error('Error updating streak data:', error);
-    }
-  };
-
   const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+    return new Date(timestamp).toLocaleDateString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      timeZone: 'UTC',
+    });
   };
 
-  if (loading) {
-    return <div>Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center">
+        <div className="text-gray-500 animate-pulse text-sm">Loading streak...</div>
+      </div>
+    );
   }
 
+  const currentStreak = streakData?.currentStreak ?? 0;
+  const bestStreak    = streakData?.bestStreak    ?? 0;
+
   return (
-    <div className="h-full w-full" style={{ maxHeight: 'calc(100vh / 3)' }}>
+    <div className="h-full w-full">
       <div className="text-xl text-green-500 font-bold mb-2">Goal Streak</div>
 
       <div className="flex flex-col items-center">
         <div className="relative flex items-center justify-center mb-2">
-          <Flame className="text-orange-500 w-14 h-14" /> 
+          <Flame
+            className="w-14 h-14"
+            style={{ color: currentStreak > 0 ? '#f97316' : '#4b5563' }}
+          />
         </div>
 
         <div className="flex flex-col items-center mb-2">
@@ -116,13 +61,21 @@ const CurrentStreak = () => {
           <div className="text-sm font-bold text-gray-300 mt-1">Day Streak</div>
         </div>
 
-        <p className="text-gray-500 text-sm">
-          {formatDate(streakData?.streakStartDate || 0)} – {formatDate(streakData?.streakLastDate || 0)}
-        </p>
+        {currentStreak > 0 && (
+          <p className="text-gray-500 text-sm">
+            {formatDate(streakData?.streakStartDate ?? 0)} – {formatDate(streakData?.streakLastDate ?? 0)}
+          </p>
+        )}
 
         <p className="mt-3 text-white font-medium">
-          Longest Streak: {Math.max(streakData?.bestStreak || 0, currentStreak)}
+          Longest Streak: {bestStreak}
         </p>
+
+        {/* {streakData && streakData.todayTime < streakData.dailyGoal && (
+          <p className="mt-2 text-xs text-gray-500">
+            {Math.max(0, Math.round(streakData.dailyGoal - streakData.todayTime))} min focus remaining today
+          </p>
+        )} */}
       </div>
     </div>
   );

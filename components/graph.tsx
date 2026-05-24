@@ -391,46 +391,17 @@ const Graph = () => {
     }
   }, [chartLoading]);
 
+  // Streak logic is now fully server-side — the GET endpoint computes,
+  // persists, and returns the authoritative streak on every call.
+  // We just need to trigger it after chart data loads so the dashboard
+  // streak box invalidates and reflects any changes.
   const handleStreak = useCallback(async () => {
     try {
-      const streakData = await fetch("/api/current-streak");
-      const streakDataJson = await streakData.json();
-      const updates: {
-        streakStart?: number;
-        streakLast?: number;
-        bestStreak?: number;
-      } = {};
-
-      const now = new Date();
-      const utcMidnight = new Date(
-        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-      );
-      const yesterdayMidnight = new Date(utcMidnight);
-      yesterdayMidnight.setDate(utcMidnight.getDate() - 1);
-
-      if (now >= utcMidnight && streakDataJson.yesterdayTime < dailyGoal) {
-        updates.streakStart = Date.now();
-        updates.streakLast = Date.now();
-      } else if (streakDataJson.todayTime >= dailyGoal) {
-        updates.streakLast = Date.now();
-        if (streakDataJson.yesterdayTime < dailyGoal) {
-          updates.streakStart = Date.now();
-        }
-      }
-
-      if (Object.keys(updates).length > 0) {
-        await fetch("/api/current-streak", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(updates),
-        });
-      }
+      await fetch("/api/current-streak");
     } catch (error) {
-      console.error("Error handling streak update:", error);
+      console.error("Error refreshing streak:", error);
     }
-  }, [dailyGoal]);
+  }, []);
 
   const handleGoalChange = useCallback(
     async (adjustment: number) => {
