@@ -190,7 +190,7 @@ const FriendsStats = () => {
       )}
 
       {/* Friends List */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
         {loading ? (
           <p className="text-sm text-gray-400">Loading friends...</p>
         ) : friends.length === 0 ? (

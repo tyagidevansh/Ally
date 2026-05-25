@@ -74,17 +74,17 @@ const Dashboard = () => {
 
       <Navbar showToggle={false} />
       <div className="container mx-auto p-2 md:p-4 mt-10">
-        <div className="grid md:grid-cols-[2fr,1fr] gap-4">
+        <div className="grid md:grid-cols-[2fr,1fr] gap-4" style={{ gridTemplateRows: '85vh auto' }}>
 
           {/* Row 1, Col 1 — Graph */}
-          <DashboardBox className="overflow-x-auto" style={{ minHeight: '70vh' }}>
+          <DashboardBox className="overflow-x-auto h-full">
             <div className="min-w-[600px] md:min-w-0 h-full">
               <Graph />
             </div>
           </DashboardBox>
 
           {/* Row 1, Col 2 — FocusTrend + FriendsStats stacked, same height as graph */}
-          <div className="flex flex-col gap-4 min-h-0">
+          <div className="flex flex-col gap-4 h-full overflow-hidden">
             <DashboardBox className="w-full flex-shrink-0">
               <FocusTrend />
             </DashboardBox>
