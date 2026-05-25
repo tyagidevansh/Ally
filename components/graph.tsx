@@ -156,7 +156,12 @@ const generateTicks = (maxValue: number) => {
 
 const Graph = () => {
   const [chartData, setChartData] = useState<any[]>([]);
-  const [dropdownSelection, setDropdownSelection] = useState<string>("30");
+  const [dropdownSelection, setDropdownSelection] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('ally-graph-range') || '30';
+    }
+    return '30';
+  });
   const [byMonth, setByMonth] = useState<boolean>(false);
   const [dailyGoal, setDailyGoal] = useState<number>(180);
 
@@ -457,7 +462,13 @@ const Graph = () => {
       <div className="flex flex-row gap-2 flex-nowrap mb-4">
         <Select
           value={dropdownSelection}
-          onValueChange={(value) => setDropdownSelection(value)}
+          onValueChange={(value) => {
+            setDropdownSelection(value);
+            // Persist preference (skip 'custom' — date range not stored)
+            if (value !== 'custom') {
+              localStorage.setItem('ally-graph-range', value);
+            }
+          }}
         >
           <SelectTrigger className="w-[170px] bg-gray-950 text-white">
             <SelectValue placeholder="Last 30 days" />
