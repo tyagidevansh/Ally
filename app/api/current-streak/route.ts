@@ -22,108 +22,123 @@ export async function GET(req: Request) {
 
     const now = Date.now();
     const todayStr = utcDateStr(now);
-    const yesterdayStr = utcDateStr(now - 86400000);
+    const todayStart = utcMidnight(todayStr);
+    const dailyGoal = profile.dailyGoal ?? 180; // minutes
+    const dailyGoalMs = dailyGoal * 60000;
 
-    const todayStart  = utcMidnight(todayStr);
-    const todayEnd    = todayStart + 86400000 - 1;
-    const yestStart   = utcMidnight(yesterdayStr);
+    // ── Habits (for UI indicators, not streak) ──────────────────────
+    const todos = await db.toDo.findMany({ where: { profileId: profile.id } });
+    const allHabitsDone = todos.length > 0 && todos.every((t: any) => t.isCompleted);
+    const todayHabitCount = todos.length;
+    const completedHabitCount = todos.filter((t: any) => t.isCompleted).length;
 
-    // ── Focus time today & yesterday ────────────────────────────────
+    // ── Fetch all logs in a reasonable window ────────────────────────
+    // We look back up to 365 days (no one has a streak longer than that
+    // in this app). A single bulk query is much faster than per-day queries.
+    const lookbackDays = 365;
+    const lookbackStart = todayStart - lookbackDays * 86400000;
+
     const logs = await db.timerLog.findMany({
       where: {
         profileId: profile.id,
-        startTime: { gte: new Date(yestStart), lte: new Date(todayEnd) },
+        startTime: {
+          gte: new Date(lookbackStart),
+          lt: new Date(todayStart + 86400000),
+        },
       },
+      select: { startTime: true, duration: true },
     });
 
-    let todayTime = 0;
-    let yesterdayTime = 0;
-    logs.forEach((log) => {
-      const t = new Date(log.startTime).getTime();
-      if (t >= todayStart) todayTime += (log.duration || 0);
-      else yesterdayTime += (log.duration || 0);
-    });
-    // Convert ms → minutes to match dailyGoal unit
-    const todayMins     = todayTime / 60000;
-    const yesterdayMins = yesterdayTime / 60000;
-    const dailyGoal     = profile.dailyGoal ?? 180; // minutes
+    // ── Bucket logs by UTC date ─────────────────────────────────────
+    const dayTotals = new Map<string, number>();
+    for (const log of logs) {
+      const dateKey = utcDateStr(log.startTime);
+      dayTotals.set(dateKey, (dayTotals.get(dateKey) || 0) + (log.duration || 0));
+    }
 
-    // ── Habits ──────────────────────────────────────────────────────
-    const todos = await db.toDo.findMany({ where: { profileId: profile.id } });
-    const allHabitsDone = todos.length > 0 && todos.every((t: any) => t.isCompleted);
+    // ── Compute streak by walking backwards ─────────────────────────
+    // A day counts toward the streak if total logged time >= dailyGoal.
+    // The streak is purely derived from persisted timer-log data, so it
+    // works correctly regardless of when the user opens the dashboard.
+    // Todos are NOT considered — they reset daily and their state is
+    // ephemeral, so they can't be evaluated retroactively.
 
-    // A day counts toward the streak only when BOTH conditions are met
-    const todayComplete = todayMins >= dailyGoal && allHabitsDone;
+    let streak = 0;
+    let todayComplete = false;
+    let checkMs = todayStart;
 
-    // ── Streak computation ───────────────────────────────────────────
-    const streakLastMs  = profile.streakLast  ? new Date(profile.streakLast).getTime()  : 0;
-    const streakStartMs = profile.streakStart ? new Date(profile.streakStart).getTime() : 0;
-    const streakLastStr = streakLastMs ? utcDateStr(streakLastMs) : '';
-
-    const updateData: any = {};
-    let currentStreak = 0;
-
-    if (!streakLastStr) {
-      // No streak yet — start one today if today is already complete
-      if (todayComplete) {
-        updateData.streakStart = new Date(todayStart);
-        updateData.streakLast  = new Date(todayStart);
-        currentStreak = 1;
-      }
-    } else if (streakLastStr === todayStr) {
-      // Streak was already updated today — just count it
-      const days = Math.round((utcMidnight(todayStr) - utcMidnight(utcDateStr(streakStartMs))) / 86400000);
-      currentStreak = days + 1;
-    } else if (streakLastStr === yesterdayStr) {
-      // Last active day was yesterday — streak is still alive
-      const days = Math.round((utcMidnight(yesterdayStr) - utcMidnight(utcDateStr(streakStartMs))) / 86400000);
-      currentStreak = days + 1; // yesterday counted, today not yet
-
-      if (todayComplete) {
-        // Extend streak to include today
-        updateData.streakLast = new Date(todayStart);
-        currentStreak = days + 2;
-      }
+    // Check today first
+    const todayTotal = dayTotals.get(todayStr) || 0;
+    if (todayTotal >= dailyGoalMs) {
+      todayComplete = true;
+      streak = 1;
+      checkMs -= 86400000; // move to yesterday
     } else {
-      // Last active day was before yesterday — streak is broken, reset
-      if (todayComplete) {
-        updateData.streakStart = new Date(todayStart);
-        updateData.streakLast  = new Date(todayStart);
-        currentStreak = 1;
-      } else {
-        // Reset stored values so old dates don't linger
-        updateData.streakStart = new Date(todayStart);
-        updateData.streakLast  = new Date(todayStart);
-        currentStreak = 0;
+      // Today isn't complete yet — check if yesterday was the last
+      // completed day (streak is still alive, just not extended today)
+      checkMs -= 86400000;
+      const yesterdayStr = utcDateStr(checkMs);
+      const yesterdayTotal = dayTotals.get(yesterdayStr) || 0;
+      if (yesterdayTotal < dailyGoalMs) {
+        // Neither today nor yesterday complete — streak is 0
+        const updateData: any = {
+          streakStart: null,
+          streakLast: null,
+        };
+        await db.profile.update({ where: { id: profile.id }, data: updateData });
+
+        return NextResponse.json({
+          currentStreak: 0,
+          bestStreak: profile.bestStreak || 0,
+          streakStartDate: now,
+          streakLastDate: now,
+          todayTime: todayTotal / 60000,
+          dailyGoal,
+          allHabitsDone,
+          todayHabitCount,
+          completedHabitCount,
+        });
       }
+      // Yesterday was complete, start counting from yesterday
+      streak = 1;
+      checkMs -= 86400000; // move to day before yesterday
     }
 
-    // ── Best streak ─────────────────────────────────────────────────
+    // Walk further back, counting consecutive completed days
+    while (checkMs >= lookbackStart) {
+      const dateKey = utcDateStr(checkMs);
+      const total = dayTotals.get(dateKey) || 0;
+      if (total < dailyGoalMs) break;
+      streak++;
+      checkMs -= 86400000;
+    }
+
+    // The streak starts on the day after the last incomplete day
+    const streakStartDate = checkMs + 86400000;
+    const streakLastDate = todayComplete ? todayStart : todayStart - 86400000;
+
+    // ── Persist streak metadata & best streak ───────────────────────
     const bestStreak = profile.bestStreak || 0;
-    if (currentStreak > bestStreak) {
-      updateData.bestStreak = currentStreak;
+    const updateData: any = {
+      streakStart: new Date(streakStartDate),
+      streakLast: new Date(streakLastDate),
+    };
+    if (streak > bestStreak) {
+      updateData.bestStreak = streak;
     }
 
-    // Persist changes if any
-    if (Object.keys(updateData).length > 0) {
-      await db.profile.update({ where: { id: profile.id }, data: updateData });
-    }
+    await db.profile.update({ where: { id: profile.id }, data: updateData });
 
     return NextResponse.json({
-      currentStreak,
-      bestStreak: Math.max(bestStreak, currentStreak),
-      streakStartDate: updateData.streakStart
-        ? updateData.streakStart.getTime()
-        : (streakStartMs || now),
-      streakLastDate: updateData.streakLast
-        ? updateData.streakLast.getTime()
-        : (streakLastMs || now),
-      todayTime: todayMins,
-      yesterdayTime: yesterdayMins,
+      currentStreak: streak,
+      bestStreak: Math.max(bestStreak, streak),
+      streakStartDate,
+      streakLastDate,
+      todayTime: todayTotal / 60000,
       dailyGoal,
       allHabitsDone,
-      todayHabitCount: todos.length,
-      completedHabitCount: todos.filter((t: any) => t.isCompleted).length,
+      todayHabitCount,
+      completedHabitCount,
     });
 
   } catch (error) {
