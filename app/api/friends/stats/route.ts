@@ -38,9 +38,9 @@ export async function GET(req: Request) {
 
     const now = new Date();
     const startOfDay = new Date(Date.UTC(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
       0, 0, 0, 0
     ));
 
@@ -73,12 +73,30 @@ export async function GET(req: Request) {
       const friendTodos = completedTodos.filter(todo => todo.profileId === friend.id);
       const goalsHitToday = friendTodos.length;
 
+      // Read the streak from the friend's stored profile data.
+      // These are updated each time the friend loads their own dashboard.
+      // We must also verify the streak is still alive — if streakLast is
+      // older than yesterday, the streak has been broken.
       let currentStreak = 0;
       if (friend.streakStart && friend.streakLast) {
-        const sStart = new Date(friend.streakStart).setHours(0,0,0,0);
-        const sLast = new Date(friend.streakLast).setHours(0,0,0,0);
-        const daysBetween = Math.floor((sLast - sStart) / (1000 * 60 * 60 * 24));
-        currentStreak = daysBetween + 1;
+        const lastDay = Date.UTC(
+          new Date(friend.streakLast).getUTCFullYear(),
+          new Date(friend.streakLast).getUTCMonth(),
+          new Date(friend.streakLast).getUTCDate(),
+        );
+        const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+        const yesterdayUTC = todayUTC - 86400000;
+
+        // Only count as a live streak if last completed day is today or yesterday
+        if (lastDay >= yesterdayUTC) {
+          const startDay = Date.UTC(
+            new Date(friend.streakStart).getUTCFullYear(),
+            new Date(friend.streakStart).getUTCMonth(),
+            new Date(friend.streakStart).getUTCDate(),
+          );
+          const daysBetween = Math.round((lastDay - startDay) / 86400000);
+          currentStreak = daysBetween + 1;
+        }
       }
 
       return {
