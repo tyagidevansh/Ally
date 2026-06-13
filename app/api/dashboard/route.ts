@@ -9,7 +9,6 @@ import {
   getFriendRequests,
   getTodos,
   getCheers,
-  getDefaultGraphData,
 } from "@/lib/dashboard-queries";
 
 export const dynamic = 'force-dynamic';
@@ -25,16 +24,21 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const timezone = searchParams.get("timezone") || "UTC";
 
-    // Run all database queries concurrently
-    const streak = await getStreak(profile);
-    const comparison = await getFocusComparison(profile);
-    const productiveHours = await getProductiveHours(profile, timezone);
-    const recentSessions = await getRecentTimes(profile);
-    const friendsStats = await getFriendsStats(profile);
-    const friendRequests = await getFriendRequests(profile);
-    const todos = await getTodos(profile);
-    const cheers = await getCheers(profile);
-    const graphData = await getDefaultGraphData(profile);
+    // Batch 1: lightweight queries
+    const [streak, comparison, productiveHours, recentSessions, todos, cheers] = await Promise.all([
+      getStreak(profile),
+      getFocusComparison(profile),
+      getProductiveHours(profile, timezone),
+      getRecentTimes(profile),
+      getTodos(profile),
+      getCheers(profile),
+    ]);
+
+    // Batch 2: friends queries (these query other users' data)
+    const [friendsStats, friendRequests] = await Promise.all([
+      getFriendsStats(profile),
+      getFriendRequests(profile),
+    ]);
 
     return NextResponse.json({
       streak,
@@ -45,7 +49,6 @@ export async function GET(req: Request) {
       friendRequests,
       todos,
       cheers,
-      graphData,
     });
   } catch (error) {
     console.error("[DASHBOARD_API GET ERROR]", error);

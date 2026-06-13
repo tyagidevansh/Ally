@@ -62,13 +62,6 @@ const Dashboard = () => {
           queryClient.setQueryData(['friendRequests'], data.friendRequests);
           queryClient.setQueryData(['todos'], data.todos);
           
-          if (data.graphData) {
-            queryClient.setQueryData(
-              ['graph', data.graphData.params.from, data.graphData.params.to, data.graphData.params.byMonth, data.graphData.params.allTime, false],
-              { success: true, chartData: data.graphData.chartData }
-            );
-          }
-          
           if (data.cheers && data.cheers.length > 0) {
             setCheers(data.cheers);
             await fetch('/api/friends/cheer', {
