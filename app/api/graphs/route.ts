@@ -13,6 +13,8 @@ export async function GET(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
+    console.log("[GRAPHS API] Received request", req.url);
+
     const url = new URL(req.url);
     const startTimeString = url.searchParams.get("startTime");
     const endTimeString = url.searchParams.get("endTime");
@@ -30,43 +32,58 @@ export async function GET(req: Request) {
       return new NextResponse("Invalid date format", { status: 400 });
     }
 
-    // If allTime mode, find the earliest timerLog entry
-    if (allTime) {
-      const earliestLog = await db.timerLog.findFirst({
-        where: {
-          profileId: profile.id,
-        },
-        orderBy: {
-          startTime: 'asc',
-        },
-        select: {
-          startTime: true,
-        },
-      });
+    const earliestLog = await db.timerLog.findFirst({
+      where: { profileId: profile.id },
+      orderBy: { startTime: 'asc' },
+      select: { startTime: true },
+    });
 
-      if (earliestLog) {
-        // Set startTime to the beginning of the earliest month
-        startTime = new Date(Date.UTC(
-          earliestLog.startTime.getUTCFullYear(),
-          earliestLog.startTime.getUTCMonth(),
-          1
-        ));
-      }
+    const userStartDate = earliestLog 
+      ? new Date(Date.UTC(earliestLog.startTime.getUTCFullYear(), earliestLog.startTime.getUTCMonth(), earliestLog.startTime.getUTCDate()))
+      : new Date();
+
+    // If allTime mode, set startTime to the beginning of the earliest month
+    if (allTime && earliestLog) {
+      startTime = new Date(Date.UTC(
+        earliestLog.startTime.getUTCFullYear(),
+        earliestLog.startTime.getUTCMonth(),
+        1
+      ));
     }
 
     const activities = ["Study", "Reading", "Coding", "Meditation", "Other"];
+
+    const diffDays = Math.ceil((endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60 * 24));
+    let windowSize = 7;
+    if (diffDays <= 7) {
+      windowSize = 0;
+    } else if (diffDays <= 31) {
+      windowSize = 7;
+    } else if (diffDays <= 90) {
+      windowSize = 14;
+    } else {
+      windowSize = 30;
+    }
+
+    const paddingDays = Math.max(0, windowSize - 1);
+
+    // For the running average, we need `paddingDays` of data prior to the requested startTime
+    const queryStartTime = byMonth 
+      ? startTime 
+      : new Date(Date.UTC(startTime.getUTCFullYear(), startTime.getUTCMonth(), startTime.getUTCDate() - paddingDays));
 
     const logs = await db.timerLog.findMany({
       where: {
         profileId: profile.id,
         startTime: {
-          gte: startTime,
+          gte: queryStartTime,
           lt: new Date(Date.UTC(endTime.getUTCFullYear(), endTime.getUTCMonth(), endTime.getUTCDate() + 1)),
         },
       },
       orderBy: {
         startTime: 'asc',
       },
+      select: { startTime: true, duration: true, activity: true },
     });
 
     const chartData = [];
@@ -147,9 +164,10 @@ export async function GET(req: Request) {
       let weeklyTimes: number[] = [];
       let weeklyTotal = 0;
 
-      // Iterate through each day in the range using UTC
-      let currentDate = new Date(Date.UTC(startTime.getUTCFullYear(), startTime.getUTCMonth(), startTime.getUTCDate()));
+      // Iterate through each day starting from 6 days ago
+      let currentDate = new Date(Date.UTC(queryStartTime.getUTCFullYear(), queryStartTime.getUTCMonth(), queryStartTime.getUTCDate()));
       const endDate = new Date(Date.UTC(endTime.getUTCFullYear(), endTime.getUTCMonth(), endTime.getUTCDate()));
+      const actualStartDate = new Date(Date.UTC(startTime.getUTCFullYear(), startTime.getUTCMonth(), startTime.getUTCDate()));
 
       while (currentDate <= endDate) {
         const year = currentDate.getUTCFullYear();
@@ -170,25 +188,41 @@ export async function GET(req: Request) {
           totalTime += time;
         });
 
-        // Sliding window for weekly average
-        if (weeklyTimes.length < 7) {
-          weeklyTimes.push(totalTime);
-          weeklyTotal += totalTime;
+        // Sliding window for rolling average
+        if (windowSize > 0) {
+          if (currentDate >= userStartDate) {
+            if (weeklyTimes.length < windowSize) {
+              weeklyTimes.push(totalTime);
+              weeklyTotal += totalTime;
+            } else {
+              weeklyTotal -= weeklyTimes.shift() || 0;
+              weeklyTotal += totalTime;
+              weeklyTimes.push(totalTime);
+            }
+          }
+
+          const weeklyAverage = weeklyTimes.length > 0 ? (weeklyTotal / weeklyTimes.length) : 0;
+
+          if (currentDate >= actualStartDate) {
+            chartData.push({
+              date: displayDate,
+              ...activityTimes,
+              totalTime,
+              dailyGoal: profile.dailyGoal,
+              weeklyAverage,
+            });
+          }
         } else {
-          weeklyTotal -= weeklyTimes.shift() || 0;
-          weeklyTotal += totalTime;
-          weeklyTimes.push(totalTime);
+          // No rolling average
+          if (currentDate >= actualStartDate) {
+            chartData.push({
+              date: displayDate,
+              ...activityTimes,
+              totalTime,
+              dailyGoal: profile.dailyGoal,
+            });
+          }
         }
-
-        const weeklyAverage = weeklyTotal / weeklyTimes.length;
-
-        chartData.push({
-          date: displayDate,
-          ...activityTimes,
-          totalTime,
-          dailyGoal: profile.dailyGoal,
-          weeklyAverage,
-        });
 
         // Move to next day
         currentDate = new Date(Date.UTC(year, month, day + 1));

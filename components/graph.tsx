@@ -373,6 +373,7 @@ const Graph = () => {
     },
     enabled: !!date?.from && !!date?.to,
     placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
   });
 
   useEffect(() => {
@@ -440,6 +441,19 @@ const Graph = () => {
   const CustomTooltip = useCallback(({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const weeklyAverage = payload[0]?.payload?.weeklyAverage;
+      
+      let windowSizeLabel = "Rolling";
+      if (date?.from && date?.to) {
+        const diffDays = Math.ceil((date.to.getTime() - date.from.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays <= 31) {
+          windowSizeLabel = "7-Day";
+        } else if (diffDays <= 90) {
+          windowSizeLabel = "14-Day";
+        } else {
+          windowSizeLabel = "30-Day";
+        }
+      }
+
       return (
         <div className="bg-gray-800 p-3 border border-gray-700 rounded-md shadow-lg">
           <p className="text-white text-xs font-semibold mb-1">{`Date: ${label}`}</p>
@@ -447,7 +461,7 @@ const Graph = () => {
             payload[0].payload.totalTime
           )}`}</p>
           {weeklyAverage !== undefined && (
-            <p className="text-orange-500 text-xs mt-1">{`Weekly Avg: ${formatTime(
+            <p className="text-orange-500 text-xs mt-1">{`${windowSizeLabel} Avg: ${formatTime(
               weeklyAverage
             )}`}</p>
           )}
@@ -455,7 +469,7 @@ const Graph = () => {
       );
     }
     return null;
-  }, []);
+  }, [date]);
 
   return (
     <div className="h-full w-full flex flex-col">

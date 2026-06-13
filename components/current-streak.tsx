@@ -20,9 +20,10 @@ const CurrentStreak = () => {
     queryKey: ['streak'],
     queryFn: async () => {
       const res = await fetch('/api/current-streak');
-      if (!res.ok) throw new Error('Failed to fetch streak data');
+      if (!res.ok) throw new Error('Failed to fetch streak');
       return res.json();
     },
+    staleTime: 5 * 60 * 1000,
   });
 
   const formatDate = (timestamp: number) => {

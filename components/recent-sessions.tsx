@@ -272,6 +272,7 @@ const RecentSessions = () => {
       const data = await res.json();
       return data.success ? data.logs : [];
     },
+    staleTime: 5 * 60 * 1000,
   });
 
   const invalidateAll = () => {

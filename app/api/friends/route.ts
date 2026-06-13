@@ -29,9 +29,7 @@ export async function POST(req: Request) {
           mode: 'insensitive'
         }
       },
-      orderBy: {
-        updatedAt: 'desc'
-      }
+      select: { id: true },
     });
 
     if (!friendProfile) {
@@ -45,7 +43,8 @@ export async function POST(req: Request) {
           { user1Id: profile.id, user2Id: friendProfile.id },
           { user1Id: friendProfile.id, user2Id: profile.id }
         ]
-      }
+      },
+      select: { id: true },
     });
 
     if (existingFriendship) {

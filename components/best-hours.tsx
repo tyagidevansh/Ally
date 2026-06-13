@@ -13,13 +13,9 @@ const BestHours = () => {
       const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const response = await fetch('/api/productive-hours?timezone=' + userTimeZone);
       if (!response.ok) throw new Error('Failed to fetch best hours data');
-      const responseJSON = await response.json();
-
-      return Object.keys(responseJSON).map((hour, index) => ({
-        hour: `${hour}:00`,
-        productivity: Math.round(responseJSON[hour] * 100)
-      }));
+      return response.json();
     },
+    staleTime: 5 * 60 * 1000,
   });
 
   const CustomTooltip = ({ active, payload, label }: any) => {

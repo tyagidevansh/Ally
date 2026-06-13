@@ -1,6 +1,7 @@
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { getFriendRequests } from "@/lib/dashboard-queries";
 
 export const dynamic = 'force-dynamic';
 
@@ -12,22 +13,7 @@ export async function GET(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const pendingRequests = await db.friendship.findMany({
-      where: {
-        user2Id: profile.id,
-        status: "PENDING"
-      },
-      include: {
-        user1: true
-      }
-    });
-
-    const requestsData = pendingRequests.map(req => ({
-      id: req.id,
-      senderName: req.user1.name,
-      senderEmail: req.user1.email
-    }));
-
+    const requestsData = await getFriendRequests(profile);
     return NextResponse.json(requestsData);
   } catch (error) {
     console.error("[FRIENDS_REQUESTS GET ERROR]", error);
@@ -50,7 +36,8 @@ export async function PUT(req: Request) {
     }
 
     const friendship = await db.friendship.findUnique({
-      where: { id }
+      where: { id },
+      select: { id: true, user2Id: true },
     });
 
     if (!friendship || friendship.user2Id !== profile.id) {

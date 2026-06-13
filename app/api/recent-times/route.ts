@@ -1,6 +1,6 @@
 import { currentProfile } from "@/lib/current-profile";
-import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { getRecentTimes } from "@/lib/dashboard-queries";
 
 export const dynamic = 'force-dynamic';
 
@@ -12,29 +12,12 @@ export async function GET(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const recentLogs = await db.timerLog.findMany({
-      where: {
-        profileId: profile.id,
-      },
-      orderBy: {
-        startTime: 'desc', 
-      },
-      take: 20, 
-    });
+    const logs = await getRecentTimes(profile);
 
-    const formattedLogs = recentLogs.map(log => ({
-      id: log.id,
-      startTime: log.startTime,
-      endTime: log.endTime,
-      activity: log.activity,
-      duration: log.duration,
-      tag: log.tag,
-    }));
-
-    return NextResponse.json({ success: "recent times", logs: formattedLogs });
+    return NextResponse.json({ success: "recent times", logs });
 
   } catch (error) {
-    console.log("[RECENT LOGS ERROR]", error);
+    console.error("[RECENT LOGS ERROR]", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 }

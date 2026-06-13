@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Plus, Trash2, Target, Flame, Trophy } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface Todo {
   id: string;
@@ -9,38 +10,29 @@ interface Todo {
 }
 
 const HabitBuilder = () => {
-  const [todos, setTodos] = useState<Todo[]>([]);
+  const queryClient = useQueryClient();
   const [newTask, setNewTask] = useState("");
   const [priority, setPriority] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [focusGoalMet, setFocusGoalMet] = useState(false);
 
-  useEffect(() => {
-    const fetchTodos = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch("/api/todos");
-        const data = await response.json();
-        setTodos(data);
-      } catch (error) {
-        console.error("Failed to fetch todos", error);
-      }
-      setLoading(false);
-    };
+  const { data: todos = [], isLoading: loading } = useQuery<Todo[]>({
+    queryKey: ['todos'],
+    queryFn: async () => {
+      const response = await fetch("/api/todos");
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-    const fetchStreakData = async () => {
-      try {
-        const res = await fetch("/api/current-streak");
-        const data = await res.json();
-        setFocusGoalMet(data.todayTime >= data.dailyGoal);
-      } catch (error) {
-        console.error("Failed to fetch streak data", error);
-      }
-    };
+  const { data: streakData } = useQuery<any>({
+    queryKey: ['streak'],
+    queryFn: async () => {
+      const res = await fetch("/api/current-streak");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-    fetchTodos();
-    fetchStreakData();
-  }, []);
+  const focusGoalMet = streakData ? streakData.todayTime >= streakData.dailyGoal : false;
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +40,8 @@ const HabitBuilder = () => {
 
     const tempId = Date.now().toString();
     const newTodo: Todo = { id: tempId, task: newTask, priority, isCompleted: false };
-    setTodos([newTodo, ...todos]);
+    
+    queryClient.setQueryData(['todos'], (old: Todo[] = []) => [newTodo, ...old]);
     setNewTask("");
 
     try {
@@ -58,16 +51,18 @@ const HabitBuilder = () => {
         body: JSON.stringify({ task: newTask, priority }),
       });
       const savedTodo = await response.json();
-      setTodos((cur) => cur.map((t) => (t.id === tempId ? savedTodo : t)));
+      
+      queryClient.setQueryData(['todos'], (old: Todo[] = []) => 
+        old.map(t => t.id === tempId ? savedTodo : t)
+      );
     } catch (error) {
-      console.error("Failed to add task", error);
-      setTodos((cur) => cur.filter((t) => t.id !== tempId));
+      console.error("Failed to save todo", error);
     }
   };
 
   const handleMarkAsComplete = async (id: string, isCompleted: boolean) => {
-    setTodos((cur) =>
-      cur.map((t) => (t.id === id ? { ...t, isCompleted: !isCompleted } : t))
+    queryClient.setQueryData(['todos'], (old: Todo[] = []) => 
+      old.map(t => (t.id === id ? { ...t, isCompleted: !isCompleted } : t))
     );
     try {
       await fetch("/api/todos", {
@@ -75,26 +70,25 @@ const HabitBuilder = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, isCompleted: !isCompleted }),
       });
+      queryClient.invalidateQueries({ queryKey: ['streak'] });
     } catch (error) {
       console.error("Failed to update task", error);
-      setTodos((cur) =>
-        cur.map((t) => (t.id === id ? { ...t, isCompleted } : t))
-      );
     }
   };
 
   const handleDeleteTask = async (id: string) => {
-    const originalTodos = [...todos];
-    setTodos((cur) => cur.filter((t) => t.id !== id));
+    queryClient.setQueryData(['todos'], (old: Todo[] = []) => 
+      old.filter(t => t.id !== id)
+    );
     try {
       await fetch("/api/todos", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
+      queryClient.invalidateQueries({ queryKey: ['streak'] });
     } catch (error) {
       console.error("Failed to delete task", error);
-      setTodos(originalTodos);
     }
   };
 

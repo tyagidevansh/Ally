@@ -1,6 +1,7 @@
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { getTodos } from "@/lib/dashboard-queries";
 
 export const dynamic = 'force-dynamic';
 
@@ -12,30 +13,7 @@ export async function GET(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const now = new Date();
-    const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-
-    if (new Date(profile.lastTodoReset) < startOfDay) {
-      await db.toDo.updateMany({
-        where: { profileId: profile.id, isCompleted: true },
-        data: { isCompleted: false },
-      });
-
-      await db.profile.update({
-        where: { id: profile.id },
-        data: { lastTodoReset: now },
-      });
-    }
-
-    const todos = await db.toDo.findMany({
-      where: {
-        profileId: profile.id,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
- 
+    const todos = await getTodos(profile);
     return NextResponse.json(todos);
   } catch (error) {
     console.error("[TODO GET ERROR]", error);

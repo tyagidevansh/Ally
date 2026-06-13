@@ -1,6 +1,7 @@
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { getCheers } from "@/lib/dashboard-queries";
 
 export const dynamic = 'force-dynamic';
 
@@ -76,24 +77,7 @@ export async function GET(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const cheers = await db.cheerSneer.findMany({
-      where: {
-        toId: profile.id,
-        seen: false,
-      },
-      include: {
-        from: {
-          select: {
-            name: true,
-            imageUrl: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
+    const cheers = await getCheers(profile);
     return NextResponse.json(cheers);
   } catch (error) {
     console.error("[CHEER_SNEER GET ERROR]", error);

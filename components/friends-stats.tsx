@@ -38,6 +38,7 @@ const FriendsStats = () => {
       return res.json();
     },
     refetchInterval: 15 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: pendingRequests = [], isLoading: isLoadingRequests } = useQuery<FriendRequest[]>({
@@ -48,6 +49,7 @@ const FriendsStats = () => {
       return res.json();
     },
     refetchInterval: 15 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
   });
 
   const loading = isLoadingFriends || isLoadingRequests;
