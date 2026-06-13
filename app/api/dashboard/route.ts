@@ -26,27 +26,15 @@ export async function GET(req: Request) {
     const timezone = searchParams.get("timezone") || "UTC";
 
     // Run all database queries concurrently
-    const [
-      streak,
-      comparison,
-      productiveHours,
-      recentSessions,
-      friendsStats,
-      friendRequests,
-      todos,
-      cheers,
-      graphData,
-    ] = await Promise.all([
-      getStreak(profile),
-      getFocusComparison(profile),
-      getProductiveHours(profile, timezone),
-      getRecentTimes(profile),
-      getFriendsStats(profile),
-      getFriendRequests(profile),
-      getTodos(profile),
-      getCheers(profile),
-      getDefaultGraphData(profile),
-    ]);
+    const streak = await getStreak(profile);
+    const comparison = await getFocusComparison(profile);
+    const productiveHours = await getProductiveHours(profile, timezone);
+    const recentSessions = await getRecentTimes(profile);
+    const friendsStats = await getFriendsStats(profile);
+    const friendRequests = await getFriendRequests(profile);
+    const todos = await getTodos(profile);
+    const cheers = await getCheers(profile);
+    const graphData = await getDefaultGraphData(profile);
 
     return NextResponse.json({
       streak,

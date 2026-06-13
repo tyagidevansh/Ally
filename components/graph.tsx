@@ -166,21 +166,22 @@ const Graph = () => {
   const [dailyGoal, setDailyGoal] = useState<number>(180);
   const [force7DayAvg, setForce7DayAvg] = useState<boolean>(false);
 
-  // Initialize with UTC dates
-  const now = new Date();
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(Date.UTC(2024, 8, 13, 0, 0, 0, 0)),
-    to: new Date(
-      Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate(),
-        23,
-        59,
-        59,
-        999
-      )
-    ),
+  // Initialize with UTC dates for 30 days
+  const [date, setDate] = useState<DateRange | undefined>(() => {
+    const now30 = new Date();
+    const end = new Date(Date.UTC(now30.getUTCFullYear(), now30.getUTCMonth(), now30.getUTCDate(), 23, 59, 59, 999));
+    const start = new Date(Date.UTC(now30.getUTCFullYear(), now30.getUTCMonth(), now30.getUTCDate() - 30, 0, 0, 0, 0));
+    
+    // Only use the stored custom range if it exists
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('ally-graph-range');
+      if (stored && stored !== '30') {
+        // The useEffect will calculate the right range for this stored value
+        // We just return the default 30 days for the first render to avoid 2024 fetches
+        return { from: start, to: end };
+      }
+    }
+    return { from: start, to: end };
   });
 
   // Memoized calculations
