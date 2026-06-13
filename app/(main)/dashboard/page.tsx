@@ -64,7 +64,7 @@ const Dashboard = () => {
           
           if (data.graphData) {
             queryClient.setQueryData(
-              ['graph', data.graphData.params.from, data.graphData.params.to, data.graphData.params.byMonth, data.graphData.params.allTime],
+              ['graph', data.graphData.params.from, data.graphData.params.to, data.graphData.params.byMonth, data.graphData.params.allTime, false],
               { success: true, chartData: data.graphData.chartData }
             );
           }

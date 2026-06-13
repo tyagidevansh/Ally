@@ -33,21 +33,17 @@ export async function GET(req: Request) {
       return new NextResponse("Invalid date format", { status: 400 });
     }
 
-    const earliestLog = await db.timerLog.findFirst({
-      where: { profileId: profile.id },
-      orderBy: { startTime: 'asc' },
-      select: { startTime: true },
-    });
-
-    const userStartDate = earliestLog 
-      ? new Date(Date.UTC(earliestLog.startTime.getUTCFullYear(), earliestLog.startTime.getUTCMonth(), earliestLog.startTime.getUTCDate()))
-      : new Date();
+    const userStartDate = new Date(Date.UTC(
+      profile.createdAt.getUTCFullYear(), 
+      profile.createdAt.getUTCMonth(), 
+      profile.createdAt.getUTCDate()
+    ));
 
     // If allTime mode, set startTime to the beginning of the earliest month
-    if (allTime && earliestLog) {
+    if (allTime) {
       startTime = new Date(Date.UTC(
-        earliestLog.startTime.getUTCFullYear(),
-        earliestLog.startTime.getUTCMonth(),
+        userStartDate.getUTCFullYear(),
+        userStartDate.getUTCMonth(),
         1
       ));
     }

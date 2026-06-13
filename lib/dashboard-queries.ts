@@ -243,15 +243,11 @@ export async function getRecentTimes(profile: Profile) {
 }
 
 export async function getDefaultGraphData(profile: Profile) {
-  const earliestLog = await db.timerLog.findFirst({
-    where: { profileId: profile.id },
-    orderBy: { startTime: 'asc' },
-    select: { startTime: true },
-  });
-
-  const userStartDate = earliestLog 
-    ? new Date(Date.UTC(earliestLog.startTime.getUTCFullYear(), earliestLog.startTime.getUTCMonth(), earliestLog.startTime.getUTCDate()))
-    : new Date();
+  const userStartDate = new Date(Date.UTC(
+    profile.createdAt.getUTCFullYear(), 
+    profile.createdAt.getUTCMonth(), 
+    profile.createdAt.getUTCDate()
+  ));
 
   // Matches "30" days dropdown selection from graph.tsx
   const now30 = new Date();
