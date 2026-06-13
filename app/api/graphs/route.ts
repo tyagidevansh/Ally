@@ -20,6 +20,7 @@ export async function GET(req: Request) {
     const endTimeString = url.searchParams.get("endTime");
     const byMonth = url.searchParams.get("byMonth") === "true";
     const allTime = url.searchParams.get("allTime") === "true";
+    const force7DayAvg = url.searchParams.get("force7DayAvg") === "true";
     
     if (!startTimeString || !endTimeString) {
       return new NextResponse("Invalid date range", { status: 400 });
@@ -57,6 +58,8 @@ export async function GET(req: Request) {
     let windowSize = 7;
     if (diffDays <= 7) {
       windowSize = 0;
+    } else if (force7DayAvg) {
+      windowSize = 7;
     } else if (diffDays <= 31) {
       windowSize = 7;
     } else if (diffDays <= 90) {

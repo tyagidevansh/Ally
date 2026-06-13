@@ -164,6 +164,7 @@ const Graph = () => {
   });
   const [byMonth, setByMonth] = useState<boolean>(false);
   const [dailyGoal, setDailyGoal] = useState<number>(180);
+  const [force7DayAvg, setForce7DayAvg] = useState<boolean>(false);
 
   // Initialize with UTC dates
   const now = new Date();
@@ -356,8 +357,16 @@ const Graph = () => {
 
   // Debounced data fetching logic handled by React Query naturally, we'll just add a slight delay via state if needed,
   // but react-query aborts previous requests if the key changes, which effectively debounces the fetch over the network.
+  // Memoized date difference
+  const diffDays = useMemo(() => {
+    if (date?.from && date?.to) {
+      return Math.ceil((date.to.getTime() - date.from.getTime()) / (1000 * 60 * 60 * 24));
+    }
+    return 0;
+  }, [date]);
+
   const { data: fetchedData, isPending: chartLoading } = useQuery({
-    queryKey: ['graph', date?.from?.toISOString(), date?.to?.toISOString(), byMonth, dropdownSelection === "alltime"],
+    queryKey: ['graph', date?.from?.toISOString(), date?.to?.toISOString(), byMonth, dropdownSelection === "alltime", force7DayAvg],
     queryFn: async ({ signal }) => {
       if (!date?.from || !date?.to) return null;
       const response = await axios.get("/api/graphs", {
@@ -366,6 +375,7 @@ const Graph = () => {
           endTime: date.to.toISOString(),
           byMonth: byMonth,
           allTime: dropdownSelection === "alltime",
+          force7DayAvg: force7DayAvg,
         },
         signal,
       });
@@ -443,9 +453,8 @@ const Graph = () => {
       const weeklyAverage = payload[0]?.payload?.weeklyAverage;
       
       let windowSizeLabel = "Rolling";
-      if (date?.from && date?.to) {
-        const diffDays = Math.ceil((date.to.getTime() - date.from.getTime()) / (1000 * 60 * 60 * 24));
-        if (diffDays <= 31) {
+      if (diffDays > 0) {
+        if (diffDays <= 31 || force7DayAvg) {
           windowSizeLabel = "7-Day";
         } else if (diffDays <= 90) {
           windowSizeLabel = "14-Day";
@@ -469,7 +478,7 @@ const Graph = () => {
       );
     }
     return null;
-  }, [date]);
+  }, [diffDays, force7DayAvg]);
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -664,6 +673,16 @@ const Graph = () => {
             </div>
           </DrawerContent>
         </Drawer>
+
+        {!byMonth && diffDays > 31 && (
+          <Button
+            variant="outline"
+            className="hidden md:flex w-auto text-orange-500 bg-gray-950 border-gray-700 whitespace-nowrap"
+            onClick={() => setForce7DayAvg(!force7DayAvg)}
+          >
+            {force7DayAvg ? "Using 7-Day Avg" : "Switch to 7-Day Avg"}
+          </Button>
+        )}
 
         <span className="hidden md:flex items-center border p-2 rounded-md text-sm text-white bg-gray-950 border-gray-700 whitespace-nowrap">
           Range Total: {Math.round(totalTime / 60000)} min
