@@ -17,118 +17,126 @@ function utcMidnight(dateStr: string): number {
 }
 
 export async function getStreak(profile: Profile) {
-  const now = Date.now();
-  const todayStr = utcDateStr(now);
-  const todayStart = utcMidnight(todayStr);
-  const dailyGoal = profile.dailyGoal ?? 180; // minutes
-  const dailyGoalMs = dailyGoal * 60000;
+  const getCachedData = unstable_cache(
+    async (profileData: any) => {
+      const now = Date.now();
+      const todayStr = utcDateStr(now);
+      const todayStart = utcMidnight(todayStr);
+      const dailyGoal = profileData.dailyGoal ?? 180; // minutes
+      const dailyGoalMs = dailyGoal * 60000;
 
-  // ── Habits (for UI indicators, not streak) ──────────────────────
-  const todos = await db.toDo.findMany({ where: { profileId: profile.id }, select: { isCompleted: true } });
-  const allHabitsDone = todos.length > 0 && todos.every((t: any) => t.isCompleted);
-  const todayHabitCount = todos.length;
-  const completedHabitCount = todos.filter((t: any) => t.isCompleted).length;
+      // ── Habits (for UI indicators, not streak) ──────────────────────
+      const todos = await db.toDo.findMany({ where: { profileId: profileData.id }, select: { isCompleted: true } });
+      const allHabitsDone = todos.length > 0 && todos.every((t: any) => t.isCompleted);
+      const todayHabitCount = todos.length;
+      const completedHabitCount = todos.filter((t: any) => t.isCompleted).length;
 
-  const lookbackDays = 365;
-  const lookbackStart = todayStart - lookbackDays * 86400000;
+      const lookbackDays = 365;
+      const lookbackStart = todayStart - lookbackDays * 86400000;
 
-  const logs = await db.timerLog.findMany({
-    where: {
-      profileId: profile.id,
-      startTime: {
-        gte: new Date(lookbackStart),
-        lt: new Date(todayStart + 86400000),
-      },
-    },
-    select: { startTime: true, duration: true },
-  });
+      const logs = await db.timerLog.findMany({
+        where: {
+          profileId: profileData.id,
+          startTime: {
+            gte: new Date(lookbackStart),
+            lt: new Date(todayStart + 86400000),
+          },
+        },
+        select: { startTime: true, duration: true },
+      });
 
-  const dayTotals = new Map<string, number>();
-  for (const log of logs) {
-    const dateKey = utcDateStr(log.startTime);
-    dayTotals.set(dateKey, (dayTotals.get(dateKey) || 0) + (log.duration || 0));
-  }
+      const dayTotals = new Map<string, number>();
+      for (const log of logs) {
+        const dateKey = utcDateStr(log.startTime);
+        dayTotals.set(dateKey, (dayTotals.get(dateKey) || 0) + (log.duration || 0));
+      }
 
-  let streak = 0;
-  let todayComplete = false;
-  let checkMs = todayStart;
+      let streak = 0;
+      let todayComplete = false;
+      let checkMs = todayStart;
 
-  const todayTotal = dayTotals.get(todayStr) || 0;
-  if (todayTotal >= dailyGoalMs) {
-    todayComplete = true;
-    streak = 1;
-    checkMs -= 86400000; // yesterday
-  } else {
-    checkMs -= 86400000;
-    const yesterdayStr = utcDateStr(checkMs);
-    const yesterdayTotal = dayTotals.get(yesterdayStr) || 0;
-    if (yesterdayTotal < dailyGoalMs) {
+      const todayTotal = dayTotals.get(todayStr) || 0;
+      if (todayTotal >= dailyGoalMs) {
+        todayComplete = true;
+        streak = 1;
+        checkMs -= 86400000; // yesterday
+      } else {
+        checkMs -= 86400000;
+        const yesterdayStr = utcDateStr(checkMs);
+        const yesterdayTotal = dayTotals.get(yesterdayStr) || 0;
+        if (yesterdayTotal < dailyGoalMs) {
+          // Background write update if necessary
+          if (profileData.streakStart !== null || profileData.streakLast !== null) {
+            db.profile.update({
+              where: { id: profileData.id },
+              data: { streakStart: null, streakLast: null }
+            }).catch(console.error);
+          }
+
+          return {
+            currentStreak: 0,
+            bestStreak: profileData.bestStreak || 0,
+            streakStartDate: now,
+            streakLastDate: now,
+            todayTime: todayTotal / 60000,
+            dailyGoal,
+            allHabitsDone,
+            todayHabitCount,
+            completedHabitCount,
+          };
+        }
+        streak = 1;
+        checkMs -= 86400000;
+      }
+
+      while (checkMs >= lookbackStart) {
+        const dateKey = utcDateStr(checkMs);
+        const total = dayTotals.get(dateKey) || 0;
+        if (total < dailyGoalMs) break;
+        streak++;
+        checkMs -= 86400000;
+      }
+
+      const streakStartDate = checkMs + 86400000;
+      const streakLastDate = todayComplete ? todayStart : todayStart - 86400000;
+
+      const bestStreak = profileData.bestStreak || 0;
+      const newBestStreak = Math.max(bestStreak, streak);
+      
       // Background write update if necessary
-      if (profile.streakStart !== null || profile.streakLast !== null) {
-        db.profile.update({
-          where: { id: profile.id },
-          data: { streakStart: null, streakLast: null }
-        }).catch(console.error);
+      const needsUpdate = 
+        profileData.bestStreak !== newBestStreak ||
+        !profileData.streakStart || new Date(profileData.streakStart).getTime() !== streakStartDate ||
+        !profileData.streakLast || new Date(profileData.streakLast).getTime() !== streakLastDate;
+        
+      if (needsUpdate) {
+        const updateData: any = {
+          streakStart: new Date(streakStartDate),
+          streakLast: new Date(streakLastDate),
+        };
+        if (streak > bestStreak) {
+          updateData.bestStreak = streak;
+        }
+        db.profile.update({ where: { id: profileData.id }, data: updateData }).catch(console.error);
       }
 
       return {
-        currentStreak: 0,
-        bestStreak: profile.bestStreak || 0,
-        streakStartDate: now,
-        streakLastDate: now,
+        currentStreak: streak,
+        bestStreak: newBestStreak,
+        streakStartDate,
+        streakLastDate,
         todayTime: todayTotal / 60000,
         dailyGoal,
         allHabitsDone,
         todayHabitCount,
         completedHabitCount,
       };
-    }
-    streak = 1;
-    checkMs -= 86400000;
-  }
+    },
+    ["streak", profile.id],
+    { revalidate: 3600, tags: [`dashboard:${profile.id}`] }
+  );
 
-  while (checkMs >= lookbackStart) {
-    const dateKey = utcDateStr(checkMs);
-    const total = dayTotals.get(dateKey) || 0;
-    if (total < dailyGoalMs) break;
-    streak++;
-    checkMs -= 86400000;
-  }
-
-  const streakStartDate = checkMs + 86400000;
-  const streakLastDate = todayComplete ? todayStart : todayStart - 86400000;
-
-  const bestStreak = profile.bestStreak || 0;
-  const newBestStreak = Math.max(bestStreak, streak);
-  
-  // Background write update if necessary
-  const needsUpdate = 
-    profile.bestStreak !== newBestStreak ||
-    !profile.streakStart || new Date(profile.streakStart).getTime() !== streakStartDate ||
-    !profile.streakLast || new Date(profile.streakLast).getTime() !== streakLastDate;
-    
-  if (needsUpdate) {
-    const updateData: any = {
-      streakStart: new Date(streakStartDate),
-      streakLast: new Date(streakLastDate),
-    };
-    if (streak > bestStreak) {
-      updateData.bestStreak = streak;
-    }
-    db.profile.update({ where: { id: profile.id }, data: updateData }).catch(console.error);
-  }
-
-  return {
-    currentStreak: streak,
-    bestStreak: newBestStreak,
-    streakStartDate,
-    streakLastDate,
-    todayTime: todayTotal / 60000,
-    dailyGoal,
-    allHabitsDone,
-    todayHabitCount,
-    completedHabitCount,
-  };
+  return getCachedData(profile);
 }
 
 export async function getFocusComparison(profile: Profile) {
@@ -242,18 +250,26 @@ export async function getProductiveHours(profile: Profile, userTimeZone: string)
 }
 
 export async function getRecentTimes(profile: Profile) {
-  const recentLogs = await db.timerLog.findMany({
-    where: {
-      profileId: profile.id,
-    },
-    orderBy: {
-      startTime: 'desc', 
-    },
-    take: 20,
-    select: { id: true, startTime: true, endTime: true, activity: true, duration: true, tag: true },
-  });
+  const getCachedData = unstable_cache(
+    async (profileId: string) => {
+      const recentLogs = await db.timerLog.findMany({
+        where: {
+          profileId: profileId,
+        },
+        orderBy: {
+          startTime: 'desc', 
+        },
+        take: 20,
+        select: { id: true, startTime: true, endTime: true, activity: true, duration: true, tag: true },
+      });
 
-  return recentLogs;
+      return recentLogs;
+    },
+    ["recent-sessions", profile.id],
+    { revalidate: 3600, tags: [`dashboard:${profile.id}`] }
+  );
+
+  return getCachedData(profile.id);
 }
 
 export async function getDefaultGraphData(profile: Profile) {
@@ -367,162 +383,194 @@ export async function getDefaultGraphData(profile: Profile) {
 }
 
 export async function getFriendsStats(profile: Profile) {
-  const friendships = await db.friendship.findMany({
-    where: {
-      status: "ACCEPTED",
-      OR: [
-        { user1Id: profile.id },
-        { user2Id: profile.id }
-      ]
+  const getCachedData = unstable_cache(
+    async (profileId: string) => {
+      const friendships = await db.friendship.findMany({
+        where: {
+          status: "ACCEPTED",
+          OR: [
+            { user1Id: profileId },
+            { user2Id: profileId }
+          ]
+        },
+        include: {
+          user1: { select: { id: true, name: true, email: true, streakStart: true, streakLast: true, isFocusing: true } },
+          user2: { select: { id: true, name: true, email: true, streakStart: true, streakLast: true, isFocusing: true } },
+        }
+      });
+
+      const friendProfiles = friendships.map(f => {
+        return f.user1Id === profileId ? f.user2 : f.user1;
+      });
+
+      if (friendProfiles.length === 0) return [];
+
+      const now = new Date();
+      const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+      const friendIds = friendProfiles.map(p => p.id);
+
+      // Parallelize these queries and use aggregation
+      const [friendLogsAgg, completedTodosGroup] = await Promise.all([
+        db.timerLog.groupBy({
+          by: ['profileId'],
+          where: {
+            profileId: { in: friendIds },
+            startTime: { gte: startOfDay }
+          },
+          _sum: { duration: true }
+        }),
+        db.toDo.groupBy({
+          by: ['profileId'],
+          where: {
+            profileId: { in: friendIds },
+            isCompleted: true,
+            createdAt: { gte: startOfDay }
+          },
+          _count: { profileId: true }
+        })
+      ]);
+
+      const focusedTimeMap = new Map(friendLogsAgg.map(agg => [agg.profileId, agg._sum.duration || 0]));
+      const todosMap = new Map(completedTodosGroup.map(grp => [grp.profileId, grp._count.profileId || 0]));
+
+      const stats = friendProfiles.map(friend => {
+        const focusedTimeToday = focusedTimeMap.get(friend.id) || 0;
+        const goalsHitToday = todosMap.get(friend.id) || 0;
+
+        let currentStreak = 0;
+        if (friend.streakStart && friend.streakLast) {
+          const lastDay = Date.UTC(
+            new Date(friend.streakLast).getUTCFullYear(),
+            new Date(friend.streakLast).getUTCMonth(),
+            new Date(friend.streakLast).getUTCDate()
+          );
+          const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+          const yesterdayUTC = todayUTC - 86400000;
+
+          if (lastDay >= yesterdayUTC) {
+            const startDay = Date.UTC(
+              new Date(friend.streakStart).getUTCFullYear(),
+              new Date(friend.streakStart).getUTCMonth(),
+              new Date(friend.streakStart).getUTCDate()
+            );
+            const daysBetween = Math.round((lastDay - startDay) / 86400000);
+            currentStreak = daysBetween + 1;
+          }
+        }
+
+        return {
+          id: friend.id,
+          name: friend.name,
+          email: friend.email,
+          focusedTimeToday,
+          goalsHitToday,
+          streak: currentStreak,
+          isFocusing: friend.isFocusing,
+        };
+      });
+
+      return stats;
     },
-    include: {
-      user1: { select: { id: true, name: true, email: true, streakStart: true, streakLast: true, isFocusing: true } },
-      user2: { select: { id: true, name: true, email: true, streakStart: true, streakLast: true, isFocusing: true } },
-    }
-  });
+    ["friends-stats", profile.id],
+    { revalidate: 3600, tags: [`dashboard:${profile.id}`] }
+  );
 
-  const friendProfiles = friendships.map(f => {
-    return f.user1Id === profile.id ? f.user2 : f.user1;
-  });
-
-  if (friendProfiles.length === 0) return [];
-
-  const now = new Date();
-  const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
-  const friendIds = friendProfiles.map(p => p.id);
-
-  // Parallelize these queries and use aggregation
-  const [friendLogsAgg, completedTodosGroup] = await Promise.all([
-    db.timerLog.groupBy({
-      by: ['profileId'],
-      where: {
-        profileId: { in: friendIds },
-        startTime: { gte: startOfDay }
-      },
-      _sum: { duration: true }
-    }),
-    db.toDo.groupBy({
-      by: ['profileId'],
-      where: {
-        profileId: { in: friendIds },
-        isCompleted: true,
-        createdAt: { gte: startOfDay }
-      },
-      _count: { profileId: true }
-    })
-  ]);
-
-  const focusedTimeMap = new Map(friendLogsAgg.map(agg => [agg.profileId, agg._sum.duration || 0]));
-  const todosMap = new Map(completedTodosGroup.map(grp => [grp.profileId, grp._count.profileId || 0]));
-
-  const stats = friendProfiles.map(friend => {
-    const focusedTimeToday = focusedTimeMap.get(friend.id) || 0;
-    const goalsHitToday = todosMap.get(friend.id) || 0;
-
-    let currentStreak = 0;
-    if (friend.streakStart && friend.streakLast) {
-      const lastDay = Date.UTC(
-        new Date(friend.streakLast).getUTCFullYear(),
-        new Date(friend.streakLast).getUTCMonth(),
-        new Date(friend.streakLast).getUTCDate()
-      );
-      const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-      const yesterdayUTC = todayUTC - 86400000;
-
-      if (lastDay >= yesterdayUTC) {
-        const startDay = Date.UTC(
-          new Date(friend.streakStart).getUTCFullYear(),
-          new Date(friend.streakStart).getUTCMonth(),
-          new Date(friend.streakStart).getUTCDate()
-        );
-        const daysBetween = Math.round((lastDay - startDay) / 86400000);
-        currentStreak = daysBetween + 1;
-      }
-    }
-
-    return {
-      id: friend.id,
-      name: friend.name,
-      email: friend.email,
-      focusedTimeToday,
-      goalsHitToday,
-      streak: currentStreak,
-      isFocusing: friend.isFocusing,
-    };
-  });
-
-  return stats;
+  return getCachedData(profile.id);
 }
 
 export async function getFriendRequests(profile: Profile) {
-  const pendingRequests = await db.friendship.findMany({
-    where: {
-      user2Id: profile.id,
-      status: "PENDING"
-    },
-    include: {
-      user1: { select: { name: true, email: true } }
-    }
-  });
+  const getCachedData = unstable_cache(
+    async (profileId: string) => {
+      const pendingRequests = await db.friendship.findMany({
+        where: {
+          user2Id: profileId,
+          status: "PENDING"
+        },
+        include: {
+          user1: { select: { name: true, email: true } }
+        }
+      });
 
-  return pendingRequests.map(req => ({
-    id: req.id,
-    senderName: req.user1.name,
-    senderEmail: req.user1.email
-  }));
+      return pendingRequests.map(req => ({
+        id: req.id,
+        senderName: req.user1.name,
+        senderEmail: req.user1.email
+      }));
+    },
+    ["friend-requests", profile.id],
+    { revalidate: 3600, tags: [`dashboard:${profile.id}`] }
+  );
+
+  return getCachedData(profile.id);
 }
 
 export async function getTodos(profile: Profile) {
-  const now = new Date();
-  const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const getCachedData = unstable_cache(
+    async (profileData: any) => {
+      const now = new Date();
+      const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
-  if (new Date(profile.lastTodoReset) < startOfDay) {
-    // Background reset if needed
-    Promise.all([
-      db.toDo.updateMany({
-        where: { profileId: profile.id, isCompleted: true },
-        data: { isCompleted: false },
-      }),
-      db.profile.update({
-        where: { id: profile.id },
-        data: { lastTodoReset: now },
-      })
-    ]).catch(console.error);
-    
-    // We should still fetch, but we fetch assuming they are reset to false
-    // A quick hack is to fetch all, and manually set isCompleted to false for the response.
-    const todos = await db.toDo.findMany({
-      where: { profileId: profile.id },
-      orderBy: { createdAt: "desc" },
-    });
-    
-    return todos.map(t => ({ ...t, isCompleted: false }));
-  }
+      if (new Date(profileData.lastTodoReset) < startOfDay) {
+        // Background reset if needed
+        Promise.all([
+          db.toDo.updateMany({
+            where: { profileId: profileData.id, isCompleted: true },
+            data: { isCompleted: false },
+          }),
+          db.profile.update({
+            where: { id: profileData.id },
+            data: { lastTodoReset: now },
+          })
+        ]).catch(console.error);
+        
+        // We should still fetch, but we fetch assuming they are reset to false
+        // A quick hack is to fetch all, and manually set isCompleted to false for the response.
+        const todos = await db.toDo.findMany({
+          where: { profileId: profileData.id },
+          orderBy: { createdAt: "desc" },
+        });
+        
+        return todos.map(t => ({ ...t, isCompleted: false }));
+      }
 
-  return await db.toDo.findMany({
-    where: { profileId: profile.id },
-    orderBy: { createdAt: "desc" },
-  });
+      return await db.toDo.findMany({
+        where: { profileId: profileData.id },
+        orderBy: { createdAt: "desc" },
+      });
+    },
+    ["todos", profile.id],
+    { revalidate: 3600, tags: [`dashboard:${profile.id}`] }
+  );
+
+  return getCachedData(profile);
 }
 
 export async function getCheers(profile: Profile) {
-  const cheers = await db.cheerSneer.findMany({
-    where: {
-      toId: profile.id,
-      seen: false,
-    },
-    include: {
-      from: {
-        select: {
-          name: true,
-          imageUrl: true,
+  const getCachedData = unstable_cache(
+    async (profileId: string) => {
+      const cheers = await db.cheerSneer.findMany({
+        where: {
+          toId: profileId,
+          seen: false,
         },
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+        include: {
+          from: {
+            select: {
+              name: true,
+              imageUrl: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
 
-  return cheers;
+      return cheers;
+    },
+    ["cheers", profile.id],
+    { revalidate: 3600, tags: [`dashboard:${profile.id}`] }
+  );
+
+  return getCachedData(profile.id);
 }
