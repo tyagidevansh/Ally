@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { unstable_cache } from "next/cache";
 
 // Types to avoid needing full Prisma Client types imported if possible, 
 // but we can just use 'any' or the implicit inferred types for rapid dev
@@ -131,100 +132,113 @@ export async function getStreak(profile: Profile) {
 }
 
 export async function getFocusComparison(profile: Profile) {
-  const currentDate = new Date();
-  const currentMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-  const currentMonthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-  const previousMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-  const previousMonthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-  const twoMonthsAgoStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 2, 1);
-  const twoMonthsAgoEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+  const getCachedData = unstable_cache(
+    async (profileId: string) => {
+      const currentDate = new Date();
+      const currentMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const currentMonthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+      const previousMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+      const previousMonthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const twoMonthsAgoStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 2, 1);
+      const twoMonthsAgoEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
 
-  const allLogs = await db.timerLog.findMany({
-    where: {
-      profileId: profile.id,
-      startTime: {
-        gte: twoMonthsAgoStart,
-        lt: currentMonthEnd,
-      },
+      const daysPassedThisMonth = currentDate.getDate();
+      const previousMonthCurrentDay = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, daysPassedThisMonth + 1);
+      const twoMonthsAgoCurrentDay = new Date(currentDate.getFullYear(), currentDate.getMonth() - 2, daysPassedThisMonth + 1);
+
+      const [
+        currentTotal,
+        prevTotal,
+        prevDayTotal,
+        twoMonthsTotal,
+        twoMonthsDayTotal
+      ] = await Promise.all([
+        db.timerLog.aggregate({ _sum: { duration: true }, where: { profileId: profileId, startTime: { gte: currentMonthStart, lt: currentMonthEnd } } }),
+        db.timerLog.aggregate({ _sum: { duration: true }, where: { profileId: profileId, startTime: { gte: previousMonthStart, lt: previousMonthEnd } } }),
+        db.timerLog.aggregate({ _sum: { duration: true }, where: { profileId: profileId, startTime: { gte: previousMonthStart, lt: previousMonthCurrentDay } } }),
+        db.timerLog.aggregate({ _sum: { duration: true }, where: { profileId: profileId, startTime: { gte: twoMonthsAgoStart, lt: twoMonthsAgoEnd } } }),
+        db.timerLog.aggregate({ _sum: { duration: true }, where: { profileId: profileId, startTime: { gte: twoMonthsAgoStart, lt: twoMonthsAgoCurrentDay } } })
+      ]);
+
+      const totalCurrentMonthTime = currentTotal._sum.duration || 0;
+      const totalPreviousMonthTime = prevTotal._sum.duration || 0;
+      const previousMonthTimeAtCurrentDay = prevDayTotal._sum.duration || 0;
+      const totalTwoMonthsAgoTime = twoMonthsTotal._sum.duration || 0;
+      const twoMonthsAgoTimeAtCurrentDay = twoMonthsDayTotal._sum.duration || 0;
+
+      const lastDayOfCurrentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0); 
+      const totalDaysInCurrentMonth = lastDayOfCurrentMonth.getDate();
+      const averageTimePerDay = totalCurrentMonthTime / daysPassedThisMonth;
+      const expectedTotalTimeForCurrentMonth = averageTimePerDay * totalDaysInCurrentMonth;
+
+      return {
+        currentMonth: {
+          total: totalCurrentMonthTime / 60000,
+          expectedTotal: expectedTotalTimeForCurrentMonth / 60000,
+        },
+        previousMonth: {
+          total: totalPreviousMonthTime / 60000,
+          timeAtCurrentDay: previousMonthTimeAtCurrentDay / 60000,
+        },
+        twoMonthsAgo: {
+          total: totalTwoMonthsAgoTime / 60000,
+          timeAtCurrentDay: twoMonthsAgoTimeAtCurrentDay / 60000,
+        },
+      };
     },
-    select: { startTime: true, duration: true },
-  });
+    ["focus-comparison", profile.id],
+    { revalidate: 3600, tags: [`dashboard:${profile.id}`] }
+  );
 
-  const daysPassedThisMonth = currentDate.getDate();
-
-  const calculateTime = (logs: any[], startDate: number | Date, endDate: number | Date, daysPassed: number) => {
-    const filteredLogs = logs.filter(log => log.startTime >= startDate && log.startTime < endDate);
-    const totalTime = filteredLogs.reduce((total, log) => total + log.duration, 0);
-    const timeAtCurrentDay = filteredLogs
-      .filter(log => new Date(log.startTime).getDate() <= daysPassed)
-      .reduce((total, log) => total + log.duration, 0);
-    
-    return { totalTime, timeAtCurrentDay };
-  };
-
-  const { totalTime: totalCurrentMonthTime } = calculateTime(allLogs, currentMonthStart, currentMonthEnd, daysPassedThisMonth);
-  const { totalTime: totalPreviousMonthTime, timeAtCurrentDay: previousMonthTimeAtCurrentDay } = calculateTime(allLogs, previousMonthStart, previousMonthEnd, daysPassedThisMonth);
-  const { totalTime: totalTwoMonthsAgoTime, timeAtCurrentDay: twoMonthsAgoTimeAtCurrentDay } = calculateTime(allLogs, twoMonthsAgoStart, twoMonthsAgoEnd, daysPassedThisMonth);
-
-  const lastDayOfCurrentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0); 
-  const totalDaysInCurrentMonth = lastDayOfCurrentMonth.getDate();
-  const averageTimePerDay = totalCurrentMonthTime / daysPassedThisMonth;
-  const expectedTotalTimeForCurrentMonth = averageTimePerDay * totalDaysInCurrentMonth;
-
-  return {
-    currentMonth: {
-      total: totalCurrentMonthTime / 60000,
-      expectedTotal: expectedTotalTimeForCurrentMonth / 60000,
-    },
-    previousMonth: {
-      total: totalPreviousMonthTime / 60000,
-      timeAtCurrentDay: previousMonthTimeAtCurrentDay / 60000,
-    },
-    twoMonthsAgo: {
-      total: totalTwoMonthsAgoTime / 60000,
-      timeAtCurrentDay: twoMonthsAgoTimeAtCurrentDay / 60000,
-    },
-  };
+  return getCachedData(profile.id);
 }
 
 export async function getProductiveHours(profile: Profile, userTimeZone: string) {
-  const currentDate = new Date();
-  const startDate = new Date(currentDate);
-  startDate.setDate(currentDate.getDate() - 15);
-  const endDate = new Date(currentDate);
+  const getCachedData = unstable_cache(
+    async (profileId: string, tz: string) => {
+      const currentDate = new Date();
+      const startDate = new Date(currentDate);
+      startDate.setDate(currentDate.getDate() - 15);
+      const endDate = new Date(currentDate);
 
-  const allLogs = await db.timerLog.findMany({
-    where: {
-      profileId: profile.id,
-      startTime: {
-        gte: startDate,
-        lt: endDate,
-      },
+      const allLogs = await db.timerLog.findMany({
+        where: {
+          profileId: profileId,
+          startTime: {
+            gte: startDate,
+            lt: endDate,
+          },
+        },
+        select: { startTime: true, duration: true },
+      });
+
+      const productivity = Array(24).fill(0);
+      const hourCounts = Array(24).fill(0);
+
+      allLogs.forEach(log => {
+        const utcStartTime = new Date(log.startTime); 
+        const localTime = new Date(utcStartTime.toLocaleString("en-US", { timeZone: tz }));
+        const localHour = localTime.getHours(); 
+
+        productivity[localHour] += log.duration;
+        hourCounts[localHour] += 1;
+      });
+
+      const maxProductivity = Math.max(...productivity);
+      const normalizedProductivity = productivity.map((value, index) =>
+        hourCounts[index] > 0 ? value / (maxProductivity || 1) : 0
+      );
+
+      return normalizedProductivity.map((value, index) => ({
+        hour: `${index}:00`,
+        productivity: Math.round(value * 100)
+      }));
     },
-    select: { startTime: true, duration: true },
-  });
-
-  const productivity = Array(24).fill(0);
-  const hourCounts = Array(24).fill(0);
-
-  allLogs.forEach(log => {
-    const utcStartTime = new Date(log.startTime); 
-    const localTime = new Date(utcStartTime.toLocaleString("en-US", { timeZone: userTimeZone }));
-    const localHour = localTime.getHours(); 
-
-    productivity[localHour] += log.duration;
-    hourCounts[localHour] += 1;
-  });
-
-  const maxProductivity = Math.max(...productivity);
-  const normalizedProductivity = productivity.map((value, index) =>
-    hourCounts[index] > 0 ? value / (maxProductivity || 1) : 0
+    ["productive-hours", profile.id, userTimeZone],
+    { revalidate: 3600, tags: [`dashboard:${profile.id}`] }
   );
 
-  return normalizedProductivity.map((value, index) => ({
-    hour: `${index}:00`,
-    productivity: Math.round(value * 100)
-  }));
+  return getCachedData(profile.id, userTimeZone);
 }
 
 export async function getRecentTimes(profile: Profile) {
@@ -377,30 +391,33 @@ export async function getFriendsStats(profile: Profile) {
   const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
   const friendIds = friendProfiles.map(p => p.id);
 
-  // Parallelize these two queries internally
-  const [todayLogs, completedTodos] = await Promise.all([
-    db.timerLog.findMany({
+  // Parallelize these queries and use aggregation
+  const [friendLogsAgg, completedTodosGroup] = await Promise.all([
+    db.timerLog.groupBy({
+      by: ['profileId'],
       where: {
         profileId: { in: friendIds },
         startTime: { gte: startOfDay }
       },
-      select: { profileId: true, duration: true },
+      _sum: { duration: true }
     }),
-    db.toDo.findMany({
+    db.toDo.groupBy({
+      by: ['profileId'],
       where: {
         profileId: { in: friendIds },
         isCompleted: true,
         createdAt: { gte: startOfDay }
       },
-      select: { profileId: true },
+      _count: { profileId: true }
     })
   ]);
 
+  const focusedTimeMap = new Map(friendLogsAgg.map(agg => [agg.profileId, agg._sum.duration || 0]));
+  const todosMap = new Map(completedTodosGroup.map(grp => [grp.profileId, grp._count.profileId || 0]));
+
   const stats = friendProfiles.map(friend => {
-    const friendLogs = todayLogs.filter(log => log.profileId === friend.id);
-    const focusedTimeToday = friendLogs.reduce((total, log) => total + log.duration, 0);
-    const friendTodos = completedTodos.filter(todo => todo.profileId === friend.id);
-    const goalsHitToday = friendTodos.length;
+    const focusedTimeToday = focusedTimeMap.get(friend.id) || 0;
+    const goalsHitToday = todosMap.get(friend.id) || 0;
 
     let currentStreak = 0;
     if (friend.streakStart && friend.streakLast) {

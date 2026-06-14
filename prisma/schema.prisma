@@ -9,26 +9,26 @@ datasource db {
 }
 
 model Profile {
-  id          String     @id @default(uuid())
-  userId      String     @unique
-  name        String
-  imageUrl    String
-  email       String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  streakStart DateTime?  @db.Timestamp(6)
-  streakLast  DateTime?  @db.Timestamp(6)
-  bestStreak  Int?       @default(0) @db.SmallInt
-  dailyGoal   Int        @default(180) @db.SmallInt
-  Journal     Journal[]
-  TimerLog    TimerLog[]
-  ToDo        ToDo[]
+  id                     String       @id @default(uuid())
+  userId                 String       @unique
+  name                   String
+  imageUrl               String
+  email                  String
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  streakStart            DateTime?    @db.Timestamp(6)
+  streakLast             DateTime?    @db.Timestamp(6)
+  bestStreak             Int?         @default(0) @db.SmallInt
+  dailyGoal              Int          @default(180) @db.SmallInt
+  Journal                Journal[]
+  TimerLog               TimerLog[]
+  ToDo                   ToDo[]
   sentFriendRequests     Friendship[] @relation("SentFriendships")
   receivedFriendRequests Friendship[] @relation("ReceivedFriendships")
   sentCheerSneers        CheerSneer[] @relation("SentCheerSneers")
   receivedCheerSneers    CheerSneer[] @relation("ReceivedCheerSneers")
-  isFocusing  Boolean    @default(false)
-  lastTodoReset DateTime @default(now())
+  isFocusing             Boolean      @default(false)
+  lastTodoReset          DateTime     @default(now())
 }
 
 model TimerLog {
@@ -42,6 +42,8 @@ model TimerLog {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   profile   Profile  @relation(fields: [profileId], references: [id])
+
+  @@index([profileId, startTime])
 }
 
 model ToDo {
@@ -79,13 +81,13 @@ model Friendship {
 }
 
 model CheerSneer {
-  id         String   @id @default(uuid())
-  fromId     String
-  toId       String
-  type       String   // "CHEER" or "SNEER"
-  message    String
-  seen       Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  from       Profile  @relation("SentCheerSneers", fields: [fromId], references: [id], onDelete: Cascade)
-  to         Profile  @relation("ReceivedCheerSneers", fields: [toId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
+  fromId    String
+  toId      String
+  type      String // "CHEER" or "SNEER"
+  message   String
+  seen      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  from      Profile  @relation("SentCheerSneers", fields: [fromId], references: [id], onDelete: Cascade)
+  to        Profile  @relation("ReceivedCheerSneers", fields: [toId], references: [id], onDelete: Cascade)
 }

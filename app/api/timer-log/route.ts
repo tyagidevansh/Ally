@@ -1,6 +1,7 @@
 import { currentProfile } from '@/lib/current-profile';
 import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +35,8 @@ export async function POST(req: Request) {
         activity: data.activity
       }
     });
+
+    revalidateTag(`dashboard:${profile.id}`);
 
     return NextResponse.json(log);
   } catch (error) {

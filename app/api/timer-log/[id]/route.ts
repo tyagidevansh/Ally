@@ -1,6 +1,7 @@
 import { currentProfile } from '@/lib/current-profile';
 import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +31,8 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       },
     });
 
+    revalidateTag(`dashboard:${profile.id}`);
+
     return NextResponse.json(updated);
   } catch (error) {
     console.error('Error updating timer log:', error);
@@ -51,6 +54,8 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     if (!existing) return new NextResponse('Not found', { status: 404 });
 
     await db.timerLog.delete({ where: { id } });
+
+    revalidateTag(`dashboard:${profile.id}`);
 
     return new NextResponse('Deleted', { status: 200 });
   } catch (error) {
