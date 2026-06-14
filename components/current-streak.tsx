@@ -1,3 +1,4 @@
+"use client";
 'use client';
 
 import { Flame } from "lucide-react";

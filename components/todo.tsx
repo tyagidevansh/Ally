@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from "react";
 import { Plus, Trash2, Target, Flame, Trophy } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
