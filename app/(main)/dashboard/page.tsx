@@ -22,7 +22,6 @@ const DashboardBox = ({ children, className = "", style }: { children: ReactNode
 const Dashboard = () => {
   const queryClient = useQueryClient();
   const [cheers, setCheers] = useState<any[]>([]);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const fetchCheers = async () => {
     try {
@@ -46,40 +45,8 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const res = await fetch(`/api/dashboard?timezone=${userTimeZone}`);
-        if (res.ok) {
-          const data = await res.json();
-          
-          // Seed the cache so child components render instantly without fetching
-          queryClient.setQueryData(['streak'], data.streak);
-          queryClient.setQueryData(['comparison'], data.comparison);
-          queryClient.setQueryData(['focused-trends'], data.productiveHours);
-          queryClient.setQueryData(['recent-sessions'], data.recentSessions);
-          queryClient.setQueryData(['friends'], data.friendsStats);
-          queryClient.setQueryData(['friendRequests'], data.friendRequests);
-          queryClient.setQueryData(['todos'], data.todos);
-          
-          if (data.cheers && data.cheers.length > 0) {
-            setCheers(data.cheers);
-            await fetch('/api/friends/cheer', {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ids: data.cheers.map((c: any) => c.id) })
-            });
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch consolidated dashboard data", err);
-      } finally {
-        setIsInitialLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-  }, [queryClient]);
+    fetchCheers();
+  }, []);
 
   useEffect(() => {
     const handleTimerSaved = async () => {
@@ -95,14 +62,6 @@ const Dashboard = () => {
     window.addEventListener('timer-saved', handleTimerSaved);
     return () => window.removeEventListener('timer-saved', handleTimerSaved);
   }, [queryClient]);
-
-  if (isInitialLoading) {
-    return (
-      <div className="w-full min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-500"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full min-h-fit bg-gradient-to-b from-black to-gray-900 text-white relative">
