@@ -82,42 +82,39 @@ const Dashboard = () => {
 
       <Navbar showToggle={false} />
       <div className="container mx-auto p-2 md:p-4 mt-10">
-        <div
-          className="grid md:grid-cols-[2fr,1fr] gap-4"
-          style={{ gridTemplateRows: "85vh auto" }}
-        >
+        <div className="grid grid-cols-1 md:grid-cols-[2fr,1fr] md:grid-rows-[85vh_auto] gap-4">
           {/* Row 1, Col 1 — Graph */}
-          <DashboardBox className="overflow-x-auto h-full">
+          <DashboardBox className="overflow-x-auto h-full min-h-[400px] md:min-h-0">
             <div className="min-w-[600px] md:min-w-0 h-full">
               <Graph />
             </div>
           </DashboardBox>
 
           {/* Row 1, Col 2 — FocusTrend + FriendsStats stacked, same height as graph */}
-          <div className="flex flex-col gap-4 h-full overflow-hidden">
-            <DashboardBox className="w-full flex-shrink-0">
+          <div className="flex flex-col gap-4 h-full md:overflow-hidden">
+            <DashboardBox className="w-full flex-shrink-0 min-h-[300px] md:min-h-0">
               <FocusTrend />
             </DashboardBox>
-            <DashboardBox className="w-full flex-1 min-h-0 overflow-hidden">
+            <DashboardBox className="w-full flex-1 min-h-[400px] md:min-h-0 md:overflow-hidden">
               <FriendsStats />
             </DashboardBox>
           </div>
 
           {/* Row 2, Col 1 — 3 stat boxes, pinned height */}
-          <div className="grid md:grid-cols-3 gap-4 h-[280px]">
-            <DashboardBox className="w-full h-full overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:h-[280px]">
+            <DashboardBox className="w-full md:h-full overflow-hidden min-h-[250px] md:min-h-0">
               <RecentSessions />
             </DashboardBox>
-            <DashboardBox className="w-full h-full overflow-hidden">
+            <DashboardBox className="w-full md:h-full overflow-hidden min-h-[250px] md:min-h-0">
               <BestHours />
             </DashboardBox>
-            <DashboardBox className="w-full h-full overflow-hidden">
+            <DashboardBox className="w-full md:h-full overflow-hidden min-h-[250px] md:min-h-0">
               <CurrentStreak />
             </DashboardBox>
           </div>
 
           {/* Row 2, Col 2 — Daily Goals, same pinned height */}
-          <DashboardBox className="w-full overflow-hidden h-[280px]">
+          <DashboardBox className="w-full overflow-hidden md:h-[280px] min-h-[350px] md:min-h-0">
             <HabitBuilder />
           </DashboardBox>
         </div>
