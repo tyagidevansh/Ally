@@ -95,20 +95,20 @@ const Dashboard = () => {
             <DashboardBox className="w-full flex-shrink-0 min-h-[300px] md:min-h-0">
               <FocusTrend />
             </DashboardBox>
-            <DashboardBox className="w-full flex-1 min-h-[400px] md:min-h-0 md:overflow-hidden">
+            <DashboardBox className="w-full flex-1 min-h-[400px] max-h-[400px] md:max-h-none md:min-h-0 md:overflow-hidden">
               <FriendsStats />
             </DashboardBox>
           </div>
 
           {/* Row 2, Col 1 — 3 stat boxes, pinned height */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:h-[280px]">
-            <DashboardBox className="w-full md:h-full overflow-hidden min-h-[250px] md:min-h-0">
+            <DashboardBox className="w-full md:h-full overflow-hidden min-h-[250px] max-h-[350px] md:max-h-none md:min-h-0">
               <RecentSessions />
             </DashboardBox>
-            <DashboardBox className="w-full md:h-full overflow-hidden min-h-[250px] md:min-h-0">
+            <DashboardBox className="w-full md:h-full overflow-hidden min-h-[250px] max-h-[350px] md:max-h-none md:min-h-0">
               <BestHours />
             </DashboardBox>
-            <DashboardBox className="w-full md:h-full overflow-hidden min-h-[250px] md:min-h-0">
+            <DashboardBox className="w-full md:h-full overflow-hidden min-h-[250px] max-h-[350px] md:max-h-none md:min-h-0">
               <CurrentStreak />
             </DashboardBox>
           </div>
