@@ -269,7 +269,7 @@ const Navbar = ({ showToggle, linksInNewTab }: NavbarProps) => {
             <UserButton.MenuItems>
               <UserButton.Action
                 label="Edit display name"
-                labelIcon={<Pencil />}
+                labelIcon={<Pencil size={15} />}
                 onClick={() => setIsEditUsernameOpen(true)}
               />
             </UserButton.MenuItems>
@@ -308,28 +308,33 @@ const Navbar = ({ showToggle, linksInNewTab }: NavbarProps) => {
       )}
 
       <Dialog open={isEditUsernameOpen} onOpenChange={setIsEditUsernameOpen}>
-        <DialogContent>
+        <DialogContent className="bg-gray-950 text-white shadow-lg border border-gray-700 rounded-lg">
           <DialogHeader>
-            <DialogTitle>Change Display Name</DialogTitle>
-
-            <DialogDescription>Pick a new display name.</DialogDescription>
+            <DialogTitle className="text-green-500 text-xl">Change Display Name</DialogTitle>
+            <DialogDescription className="text-gray-400">Pick a new display name.</DialogDescription>
           </DialogHeader>
 
           <Input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Username"
+            className="w-full bg-gray-800 text-white border border-gray-600 rounded-md p-2"
           />
 
           <DialogFooter>
             <Button
-              variant="outline"
+              className="bg-gray-700 text-white border border-gray-600 hover:bg-gray-600"
               onClick={() => setIsEditUsernameOpen(false)}
             >
               Cancel
             </Button>
 
-            <Button onClick={handleUsernameChange}>Save</Button>
+            <Button
+              className="bg-green-600 text-white border border-green-500 hover:bg-green-500"
+              onClick={handleUsernameChange}
+            >
+              Save
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
