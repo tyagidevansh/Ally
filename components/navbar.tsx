@@ -10,6 +10,7 @@ import {
   PenTool,
   Menu,
   User,
+  LoaderCircle,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -45,6 +46,7 @@ const Navbar = ({ showToggle, linksInNewTab }: NavbarProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isEditUsernameOpen, setIsEditUsernameOpen] = useState(false);
   const [username, setUsername] = useState("");
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
   const [liveTime, setLiveTime] = useState("");
   const [isHovered, setIsHovered] = useState(false);
   const tickRef = useRef<number | null>(null);
@@ -74,6 +76,7 @@ const Navbar = ({ showToggle, linksInNewTab }: NavbarProps) => {
 
   // Handle username change
   const handleUsernameChange = async () => {
+    setIsSavingUsername(true);
     try {
       await axios.patch("/api/profile", {
         username,
@@ -82,6 +85,8 @@ const Navbar = ({ showToggle, linksInNewTab }: NavbarProps) => {
       setIsEditUsernameOpen(false);
     } catch (error) {
       console.error(error);
+    } finally {
+      setIsSavingUsername(false);
     }
   };
 
@@ -332,7 +337,9 @@ const Navbar = ({ showToggle, linksInNewTab }: NavbarProps) => {
             <Button
               className="bg-green-600 text-white border border-green-500 hover:bg-green-500"
               onClick={handleUsernameChange}
+              disabled={isSavingUsername || !username.trim()}
             >
+              {isSavingUsername && <LoaderCircle className="w-4 h-4 mr-2 animate-spin" />}
               Save
             </Button>
           </DialogFooter>
